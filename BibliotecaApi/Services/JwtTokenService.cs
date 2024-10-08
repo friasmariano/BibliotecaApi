@@ -3,6 +3,7 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -18,29 +19,36 @@ namespace BibliotecaApi.Services
         }
 
         public string GenerateToken(string userId, string userRole) {
-            var secretKey = _configuration["JwtSettings:SecretKey"];
-            var issuer = _configuration["JwtSettings:Issuer"];
-            var audience = _configuration["JwtSettings:Audience"];
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey + ""));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+            try
             {
-                new Claim(JwtRegisteredClaimNames.Sub, userId),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim("role", userRole)
-            };
+                var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY");
+                var issuer = _configuration["JwtSettings:Issuer"];
+                var audience = _configuration["JwtSettings:Audience"];
+                var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey + ""));
+                var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var token = new JwtSecurityToken
-            (
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                expires: DateTime.Now.AddHours(2),
-                signingCredentials: creds
-            );
+                var claims = new[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, userId),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim("role", userRole)
+                };
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                var token = new JwtSecurityToken
+                (
+                    issuer: issuer,
+                    audience: audience,
+                    claims: claims,
+                    expires: DateTime.Now.AddHours(2),
+                    signingCredentials: creds
+                );
+
+                return new JwtSecurityTokenHandler().WriteToken(token);
+            }
+            catch(Exception ex)
+            {
+                throw new Exception("Hubo un error en la generación del token. " + ex);
+            }
         }
     }
 }

@@ -17,6 +17,7 @@ namespace BibliotecaApi
         public DbSet<Libro> Libros { get; set; }
         public DbSet<LibroCategoria> LibrosCategorias { get; set;}
         public DbSet<Persona> Personas { get; set; }
+        public DbSet<Rol> Roles { get; set; }
         public DbSet<UsuarioToken> UserTokens { get; set; }
         public DbSet<Usuario> Usuarios { get; set; }
     }
