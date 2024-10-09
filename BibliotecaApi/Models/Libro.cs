@@ -9,7 +9,7 @@ namespace BibliotecaApi.Models
         public string Descripcion { get; set; } = string.Empty;
         public DateTime FechaPublicacion { get; set; }
 
-        public required ICollection<Autor> Autores { get; set; }
-        public required ICollection<Categoria> Categorias { get; set; }
+        public ICollection<Autor>? Autores { get; set; }
+        public ICollection<Categoria>? Categorias { get; set; }
     }
 }

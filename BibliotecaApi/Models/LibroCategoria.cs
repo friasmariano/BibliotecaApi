@@ -8,6 +8,6 @@ namespace BibliotecaApi.Models
         public long LibroId { get; set; }
         public long CategoriaId { get; set; }
 
-        public required Categoria Categoria { get; set; }
+        public Categoria? Categoria { get; set; }
     }
 }

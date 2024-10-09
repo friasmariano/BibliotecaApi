@@ -8,7 +8,7 @@ namespace BibliotecaApi.Models
         public long AutorId { get; set; }
         public long LibroId { get; set; }
 
-        public required Libro Libro { get; set; }
-        public required Autor Autor { get; set; }
+        public Libro? Libro { get; set; }
+        public Autor? Autor { get; set; }
     }
 }
