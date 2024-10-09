@@ -10,10 +10,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace BibliotecaApi.Controllers
 {
     [ApiController]
+    [Authorize(Policy = "Admin")]
     [Route("api/Account")]
     public class AccountController : ControllerBase
     {
@@ -74,8 +76,35 @@ namespace BibliotecaApi.Controllers
 
             if (!errors.Any())
             {
-                var token = _JwtTokenService.GenerateToken(user.Id.ToString(), user.Rol.Nombre);
+                var token = _JwtTokenService.GenerateToken(user!.Id.ToString(), user!.Rol!.Nombre);
                 idUser = user.Id;
+
+                #region TokenParsing
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
+
+                var expClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "exp")?.Value;
+
+                var expDate = new DateTime();
+
+                if (expClaim != null && long.TryParse(expClaim, out long expUnix))
+                {
+                    expDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                }
+                #endregion
+
+                var userToken = new UsuarioToken
+                {
+                    UsuarioId = user.Id,
+                    Token_hash = token,
+                    CreadoEn = DateTime.Now,
+                    ExpiraEn = expDate,
+                    Valido = true,
+                    Usuario = user,
+                };
+
+                _context.UserTokens.Add(userToken);
+                await _context.SaveChangesAsync();
 
                 return Ok(new { Token = token });
             }
@@ -83,8 +112,7 @@ namespace BibliotecaApi.Controllers
             return BadRequest(new { Message = errors });
         }
 
-        [HttpPost("CrearUsuario")]
-        [Authorize(Policy = "Admin")]
+        [HttpPost]
         public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioRequest request)
         {
             #region Declaration(s)
@@ -149,5 +177,136 @@ namespace BibliotecaApi.Controllers
 
             return BadRequest(new { Message = errors } );
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Get(int userId) {
+            var usuario = await _context.Usuarios
+                                .Where(e => e.Id == userId)
+                                .FirstOrDefaultAsync();
+
+            if (usuario == null) {
+                return BadRequest(new { Message = "El usuario especificado no existe." });
+            }
+            
+            return Ok(usuario);
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> Put([FromBody] EditarUsuarioRequest request)
+        {
+            #region Declarations
+            List<string> errors = new();
+            var usuario = await _context.Usuarios
+                          .Include(e => e.Persona)
+                          .Include(e => e.Rol)
+                          .Where(e => e.Id == request.UsuarioId)
+                          .FirstOrDefaultAsync();
+            ValidationResult emailResult = _emailValidator.Validate(request.Email);
+            ValidationResult passwordResult = _passwordValidator.Validate(request.Password);
+            #endregion
+
+            #region Validations
+            if (usuario == null) {
+                errors.Add("El usuario no existe.");
+            } else
+            {
+                var rol = await _context.Roles
+                            .Where(r => r.Id == usuario.RolId)
+                            .FirstOrDefaultAsync();
+
+                if (rol == null)
+                {
+                    errors.Add("El rol especificado no existe.");
+                }
+
+            }
+
+            if (string.IsNullOrEmpty(request.Nombre))
+            {
+                errors.Add("El nombre no es válido.");
+            }
+
+            if (!emailResult.IsValid)
+            {
+                foreach (var error in emailResult.Errors)
+                {
+                    errors.Add(error.ErrorMessage);
+                }
+            }
+
+            if (!passwordResult.IsValid)
+            {
+                foreach (var error in passwordResult.Errors)
+                {
+                    errors.Add(error.ErrorMessage);
+                }
+            }
+            #endregion
+
+            if (!errors.Any())
+            {
+                var persona = await _context.Personas
+                                    .Where(e => e.Id == usuario!.PersonaId)
+                                    .FirstOrDefaultAsync();
+
+                persona!.Nombre = request.Nombre;
+                _context.Entry(persona).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                usuario!.Email = request.Email;
+                usuario!.RolId = usuario.RolId;
+                usuario!.Password = _passwordHashValidator.GenerateHash(request.Password);
+
+                _context.Entry(usuario).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                return Ok(usuario);
+            }
+
+            return BadRequest(new { Message = "No ha sido posible modificar el usuario." });
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Delete([FromBody] EliminarUsuarioRequest request)
+        {
+            List<string> errors = new();
+            var usuario = await _context.Usuarios
+                                .Include(e => e.Persona)
+                                .Include(e => e.Rol)
+                                .Where(e => e.Id == request.UsuarioId)
+                                .FirstOrDefaultAsync();
+
+            if (usuario == null)
+            {
+                errors.Add("El usuario especificado no existe.");
+            }
+
+            if (!errors.Any())
+            {
+                var response = usuario;
+
+                var tokens = await _context.UserTokens
+                                   .Where(e => e.UsuarioId == usuario!.Id)
+                                   .ToListAsync();
+
+                _context.UserTokens.RemoveRange(tokens);
+                await _context.SaveChangesAsync();
+
+                _context.Usuarios.Remove(usuario!);
+                await _context.SaveChangesAsync();
+
+                var persona = await _context.Personas
+                                    .Where(e => e.Id == usuario!.Id)
+                                    .FirstOrDefaultAsync();
+
+                _context.Personas.Remove(persona!);
+                await _context.SaveChangesAsync();
+
+                return Ok(response);
+            }
+
+            return BadRequest(new { Message = "No ha sido posible eliminar el usuario." });
+        }
+
     }
 }

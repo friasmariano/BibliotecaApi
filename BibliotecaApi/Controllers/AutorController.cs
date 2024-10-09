@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BibliotecaApi.Controllers
 {
     [ApiController]
-    //[Authorize]
+    [Authorize]
     [Route("api/Autores")]
     public class AutorController : ControllerBase
     {
