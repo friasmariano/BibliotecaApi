@@ -7,6 +7,6 @@ namespace BibliotecaApi.Models
         public long Id { get; set; }
         public long PersonaId { get; set; }
 
-        public required Persona Persona { get; set; }
+        public Persona? Persona { get; set; }
     }
 }

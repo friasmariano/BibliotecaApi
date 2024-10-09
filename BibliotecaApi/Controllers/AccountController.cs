@@ -6,12 +6,15 @@ using BibliotecaApi.Services;
 using BibliotecaApi.Validators;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BibliotecaApi.Controllers
 {
+    [ApiController]
+    [Route("api/Account")]
     public class AccountController : ControllerBase
     {
         private readonly BibliotecaContext _context;
@@ -81,6 +84,7 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpPost("CrearUsuario")]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioRequest request)
         {
             #region Declaration(s)
@@ -140,7 +144,7 @@ namespace BibliotecaApi.Controllers
                 await _context.SaveChangesAsync();
 
                 Response.StatusCode = StatusCodes.Status201Created;
-                return Ok(usuario);
+                return CreatedAtAction(nameof(CrearUsuario), new { id = usuario.Id }, usuario);
             }
 
             return BadRequest(new { Message = errors } );

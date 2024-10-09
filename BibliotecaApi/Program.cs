@@ -49,7 +49,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Admin", policy =>
-        policy.RequireClaim("role", "Admin"));
+        policy.RequireClaim("role", "Administrador"));
 });
 
 builder.Services.AddScoped<EmailValidator>();
