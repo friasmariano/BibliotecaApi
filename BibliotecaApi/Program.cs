@@ -52,9 +52,9 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim("role", "Admin"));
 });
 
-builder.Services.AddValidatorsFromAssemblyContaining<EmailValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<PasswordValidator>();
-builder.Services.AddValidatorsFromAssemblyContaining<PasswordHashValidator>(); // Check this validator and make migration
+builder.Services.AddScoped<EmailValidator>();
+builder.Services.AddScoped<PasswordValidator>();
+builder.Services.AddScoped<PasswordHashValidator>();
 
 var app = builder.Build();
 
