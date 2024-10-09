@@ -5,6 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using DotNetEnv;
 using System.Text;
 using BibliotecaApi.Services;
+using FluentValidation;
+using BibliotecaApi.Models;
+using BibliotecaApi.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -48,6 +51,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("Admin", policy =>
         policy.RequireClaim("role", "Admin"));
 });
+
+builder.Services.AddValidatorsFromAssemblyContaining<EmailValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<PasswordValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<PasswordHashValidator>(); // Check this validator and make migration
 
 var app = builder.Build();
 

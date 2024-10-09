@@ -47,7 +47,7 @@ namespace BibliotecaApi.Services
             }
             catch(Exception ex)
             {
-                throw new Exception("Hubo un error en la generación del token. " + ex);
+                throw new Exception("Hubo un error en la generación del token.");
             }
         }
     }
