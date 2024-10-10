@@ -110,12 +110,26 @@ namespace BibliotecaApi.Controllers
                               .Where(e => e.Id == request.AutorId)
                               .FirstOrDefaultAsync();
 
+            #region Validation(s)
             if (autor == null)
             {
                 errors.Add("El autor no existe.");
             }
+            else
+            {
+                var autoresLibros = await _context.Autores
+                                          .Where(r => r.Id == autor.Id)
+                                          .ToListAsync();
 
-            if (!errors.Any())
+                if (autoresLibros.Count > 0)
+                {
+                    errors.Add("No se puede eliminar el autor; está vinculado a libro(s) registrado(s).");
+                }
+
+            }
+            #endregion
+
+            if (errors.Count == 0)
             {
                 var response = new Autor
                 {

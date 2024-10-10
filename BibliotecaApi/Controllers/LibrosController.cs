@@ -22,7 +22,7 @@ namespace BibliotecaApi.Controllers
             _context = context;
         }
 
-        [HttpGet]
+        [HttpGet("GetAll")]
         public async Task<IActionResult> GetLibros()
         {
             var libros = await _context.Libros
@@ -102,12 +102,15 @@ namespace BibliotecaApi.Controllers
             if (!_errors.Any())
             {
                 var libro = await _context.Libros
-                                    .Where(r => r.Id == request.Id)
-                                    .FirstOrDefaultAsync();
+                                  .Include(r => r.Autores)
+                                  .Include(e => e.Categorias)
+                                  .Where(r => r.Id == request.Id)
+                                  .FirstOrDefaultAsync();
 
                 libro!.Titulo = request.Titulo;
                 libro.Descripcion = request.Descripcion;
                 libro.FechaPublicacion = request.FechaPublicacion;
+                _context.Entry(libro).State = EntityState.Modified;
 
                 await _context.SaveChangesAsync();
 
@@ -125,26 +128,67 @@ namespace BibliotecaApi.Controllers
                 libroCategoria!.CategoriaId = request.CategoriaId;
                 await _context.SaveChangesAsync();
 
-                return NoContent();
+                return Ok(libro);
             }
 
             return BadRequest(_errors);
         }
 
-        // DELETE: api/Libros/{id}
-        [HttpDelete("{id}")]
-        public IActionResult DeleteLibro(int id)
+        [HttpDelete]
+        public async Task<IActionResult> DeleteLibro([FromBody] EliminarLibroRequest request)
         {
-            var libro = _context.Libros.Find(id);
+            _errors.Clear();
+
+            #region Declarations
+            var libro = await _context.Libros
+                              .Include(r => r.Autores)
+                              .Include(r => r.Categorias)
+                              .Where(r => r.Id == request.LibroId)
+                              .FirstOrDefaultAsync();
+
+            var autorLibro = await _context.AutoresLibros
+                                   .Where(r => r.LibroId != request.LibroId)
+                                   .ToListAsync();
+
+            var libroCategoria = await _context.LibrosCategorias
+                                       .Where(e => e.LibroId == request.LibroId)
+                                       .FirstOrDefaultAsync();
+            #endregion
+
+            #region Validations
             if (libro == null)
             {
-                return NotFound();
+                _errors.Add("El libro especificado no existe.");
+            } else
+            {
+                if (autorLibro == null)
+                {
+                    _errors.Add("El libro especificado no tiene autor asignado.");
+                }
+
+                if (libroCategoria == null) {
+                    _errors.Add("El libro especificado no tiene categoría asignada.");
+                }
+            }
+            #endregion
+
+            if (!_errors.Any())
+            {
+                var response = libro;
+
+                _context.AutoresLibros.RemoveRange(autorLibro!);
+                await _context.SaveChangesAsync();
+
+                _context.LibrosCategorias.Remove(libroCategoria!);
+                await _context.SaveChangesAsync();
+
+                _context.Libros.Remove(libro!);
+                await _context.SaveChangesAsync();
+
+                return Ok(response);
             }
 
-            _context.Libros.Remove(libro);
-            _context.SaveChanges();
-
-            return NoContent();
+            return BadRequest(new { Message = _errors });
         }
 
         private async void ValidateLibro(CELibroRequest libro)
