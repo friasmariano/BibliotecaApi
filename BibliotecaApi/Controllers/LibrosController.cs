@@ -10,7 +10,7 @@ using Azure.Core;
 namespace BibliotecaApi.Controllers
 {
     [ApiController]
-    [Authorize]
+    //[Authorize]
     [Route("api/Libros")]
     public class LibrosController : ControllerBase
     {
@@ -47,10 +47,80 @@ namespace BibliotecaApi.Controllers
             return Ok(libro);
         }
 
+        [HttpGet("GetByFechaPublicacion")]
+        public async Task<IActionResult> BuscarPorFecha(DateTime fecha)
+        {
+            var formattedDate = fecha.ToString("yyyy-MM-dd");
+
+            var libro = await _context.Libros
+                              .Where(e => e.FechaPublicacion.ToString().Contains(formattedDate))
+                              .ToListAsync();
+
+            if (libro == null)
+            {
+                return NotFound("No se ha encontrado ningún libro con esa fecha de publicación.");
+            }
+
+            return Ok(libro);
+        }
+
+        [HttpGet("GetByTitulo")]
+        public async Task<IActionResult> BuscarPorTitulo(string titulo)
+        {
+            var libro = await _context.Libros
+                              .Where(e => e.Titulo.Contains(titulo))
+                              .FirstOrDefaultAsync();
+
+            if (libro == null)
+            {
+                return NotFound("No se ha encontrado ningún libro de ese título.");
+            }
+
+            return Ok(libro);
+        }
+
+        [HttpGet("GetByCategoria")]
+        public async Task<IActionResult> BuscarPorCategoria(string categoria)
+        {    
+            var categorias = await _context.Categorias
+                                  .Where(e => e.Nombre.Contains(categoria))
+                                  .FirstOrDefaultAsync();
+
+
+            if (categorias == null)
+            {
+                return NotFound("No se ha encontrado ningún libro de esa categoría.");
+            } else
+            {
+
+                var libroCategoria = await _context.LibrosCategorias
+                                           .Where(e => e.CategoriaId == categorias.Id)
+                                           .FirstOrDefaultAsync();
+
+                if (libroCategoria == null)
+                {
+                    return NotFound("No se ha encontrado ningún libro de esa categoría.");
+                }  else
+                {
+                    var libro = await _context.Libros
+                                      .Where(r => r.Id == libroCategoria.LibroId)
+                                      .ToListAsync();
+
+                    if (libro == null)
+                    {
+                        return NotFound("No se ha encontrado ningún libro de esa categoría.");
+                    }
+
+                    return Ok(libro);
+                }
+   
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> Crear([FromBody] CELibroRequest request)
         {
-            ValidateLibro(request);
+            await ValidateLibro(request);
 
             if (!_errors.Any())
             {
@@ -97,7 +167,7 @@ namespace BibliotecaApi.Controllers
         [HttpPut]
         public async Task<IActionResult> UpdateLibro([FromBody] CELibroRequest request)
         {
-            ValidateLibro(request);
+            await ValidateLibro(request);
 
             if (!_errors.Any())
             {
@@ -191,7 +261,7 @@ namespace BibliotecaApi.Controllers
             return BadRequest(new { Message = _errors });
         }
 
-        private async void ValidateLibro(CELibroRequest libro)
+        private async Task ValidateLibro(CELibroRequest libro)
         {
             _errors.Clear();
 
@@ -222,7 +292,7 @@ namespace BibliotecaApi.Controllers
                 _errors.Add("El autor no es válido.");
             }
 
-            if (libro != null) {
+            if (libro != null && libro.Id > 0) {
 
                 var book = await _context.Libros
                                   .Where(e => e.Id == libro.Id)
