@@ -15,7 +15,6 @@ using System.IdentityModel.Tokens.Jwt;
 namespace BibliotecaApi.Controllers
 {
     [ApiController]
-    [Authorize(Policy = "Admin")]
     [Route("api/Account")]
     public class AccountController : ControllerBase
     {
@@ -113,6 +112,7 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioRequest request)
         {
             #region Declaration(s)
@@ -179,6 +179,7 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Get(int userId) {
             var usuario = await _context.Usuarios
                                 .Where(e => e.Id == userId)
@@ -192,6 +193,7 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpPut]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Put([FromBody] EditarUsuarioRequest request)
         {
             #region Declarations
@@ -267,6 +269,7 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpDelete]
+        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Delete([FromBody] EliminarUsuarioRequest request)
         {
             List<string> errors = new();
