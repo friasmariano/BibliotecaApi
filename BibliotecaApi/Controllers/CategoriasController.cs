@@ -10,7 +10,6 @@ using BibliotecaApi.Requests;
 namespace BibliotecaApi.Controllers
 {
     [ApiController]
-    //[Authorize]
     [Route("api/Categorias")]
     public class CategoriasController : ControllerBase
     {

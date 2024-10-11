@@ -7,13 +7,13 @@ namespace BibliotecaApi.Predicates
 {
     public class BuscarLibroPredicate
     {
-        public Expression<Func<Libro, bool>> BuscarLibroFilter (SearchFilter searchFilter)
+        public Expression<Func<Libro, bool>> BuscarLibroFilter (SearchFilter filter)
         {
             var predicate = PredicateBuilder.New<Libro>(true);
 
-            if (!string.IsNullOrEmpty(searchFilter.Categoria))
+            if (!string.IsNullOrEmpty(filter.Titulo))
             {
-                predicate = predicate.And(p => p.Titulo.Contains(searchFilter.NombreLibro));
+                predicate = predicate.And(p => p.Titulo.Contains(filter.Titulo));
             }
 
 
@@ -23,8 +23,8 @@ namespace BibliotecaApi.Predicates
     }
 
     public class SearchFilter {
-        public DateTime FechaPublicacion { get; set; }
-        public string NombreLibro {  get; set; } = string.Empty;
+        public string Titulo {  get; set; } = string.Empty;
         public string Categoria {  get; set; } = string.Empty;
+        public string FechaPublicacion { get; set; } = string.Empty;
     }
 }

@@ -24,6 +24,7 @@ builder.Services.AddDbContext<BibliotecaContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+
 // JWT Configuration
 builder.Services.AddAuthentication(options =>
 {

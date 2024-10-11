@@ -10,7 +10,6 @@ using Azure.Core;
 namespace BibliotecaApi.Controllers
 {
     [ApiController]
-    //[Authorize]
     [Route("api/Libros")]
     public class LibrosController : ControllerBase
     {
@@ -86,7 +85,6 @@ namespace BibliotecaApi.Controllers
                                   .Where(e => e.Nombre.Contains(categoria))
                                   .FirstOrDefaultAsync();
 
-
             if (categorias == null)
             {
                 return NotFound("No se ha encontrado ningún libro de esa categoría.");
@@ -104,7 +102,7 @@ namespace BibliotecaApi.Controllers
                 {
                     var libro = await _context.Libros
                                       .Where(r => r.Id == libroCategoria.LibroId)
-                                      .ToListAsync();
+                                      .FirstOrDefaultAsync();
 
                     if (libro == null)
                     {

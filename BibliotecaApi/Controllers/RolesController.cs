@@ -49,7 +49,11 @@ namespace BibliotecaApi.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CrearRolRequest request)
         {
-            ValidateRol(request);
+            _errors.Clear();
+
+            if (string.IsNullOrEmpty(request.Nombre)) {
+                _errors.Add("El nombre especificado no es válido.");
+            }
 
             if (_errors.Count == 0)
             {
