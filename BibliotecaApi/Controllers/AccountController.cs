@@ -1,6 +1,4 @@
-﻿
-
-using BibliotecaApi.Models;
+﻿using BibliotecaApi.Models;
 using BibliotecaApi.Requests;
 using BibliotecaApi.Services;
 using BibliotecaApi.Validators;
@@ -182,13 +180,38 @@ namespace BibliotecaApi.Controllers
         [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Get(int userId) {
             var usuario = await _context.Usuarios
+                                .Include(r => r.Persona)
+                                .Include(r => r.Rol)
                                 .Where(e => e.Id == userId)
+                                .Select(e => new UsuarioReadResponse {
+                                    Id = e.Id,
+                                    Nombre = e.Persona!.Nombre,
+                                    Email = e.Email,
+                                    Rol = e.Rol!.Nombre
+                                })
                                 .FirstOrDefaultAsync();
 
             if (usuario == null) {
                 return BadRequest(new { Message = "El usuario especificado no existe." });
             }
             
+            return Ok(usuario);
+        }
+
+        [HttpGet("GetAll")]
+        // [Authorize(Policy = "Admin")]
+        public async Task<IActionResult> GetAll() {
+            var usuario = await _context.Usuarios
+                                .Include(r => r.Persona)
+                                .Include(r => r.Rol)
+                                .Select(e => new UsuarioReadResponse {
+                                    Id = e.Id,
+                                    Nombre = e.Persona!.Nombre,
+                                    Email = e.Email,
+                                    Rol = e.Rol!.Nombre
+                                })
+                                .ToListAsync();
+
             return Ok(usuario);
         }
 
