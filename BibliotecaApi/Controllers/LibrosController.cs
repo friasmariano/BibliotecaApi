@@ -51,9 +51,27 @@ namespace BibliotecaApi.Controllers
         {
             var formattedDate = fecha.ToString("yyyy-MM-dd");
 
-            var libro = await _context.Libros
-                              .Where(e => e.FechaPublicacion.ToString().Contains(formattedDate))
-                              .ToListAsync();
+            // var libro = await _context.Libros
+            //                   .Include(r => r.Autores)
+            //                   .Include(r => r.Categorias)
+            //                   .Where(e => EF.Functions.Like(e.FechaPublicacion.ToString(), "%" + formattedDate + "%"))
+            //                   .ToListAsync();
+
+            var libro = await (from l in _context.Libros
+                               join lc in _context.LibrosCategorias on l.Id equals lc.LibroId
+                               join c in _context.Categorias on lc.CategoriaId equals c.Id
+                               join la in _context.AutoresLibros on l.Id equals la.LibroId
+                               join a in _context.Autores on la.AutorId equals a.Id
+                               join p in _context.Personas on a.PersonaId equals p.Id
+                               where EF.Functions.Like(l.FechaPublicacion.ToString(), "%" + formattedDate + "%")
+                               select new {
+                                id = l.Id,
+                                titulo = l.Titulo,
+                                descripcion = l.Descripcion,
+                                fecha = l.FechaPublicacion,
+                                autor = p.Nombre,
+                                categoria = c.Nombre
+                               }).ToListAsync();
 
             if (libro == null)
             {
@@ -61,14 +79,27 @@ namespace BibliotecaApi.Controllers
             }
 
             return Ok(libro);
+
         }
 
         [HttpGet("GetByTitulo")]
         public async Task<IActionResult> BuscarPorTitulo(string titulo)
         {
-            var libro = await _context.Libros
-                              .Where(e => e.Titulo.Contains(titulo))
-                              .FirstOrDefaultAsync();
+            var libro = await (from l in _context.Libros
+                               join lc in _context.LibrosCategorias on l.Id equals lc.LibroId
+                               join c in _context.Categorias on lc.CategoriaId equals c.Id
+                               join la in _context.AutoresLibros on l.Id equals la.LibroId
+                               join a in _context.Autores on la.AutorId equals a.Id
+                               join p in _context.Personas on a.PersonaId equals p.Id
+                               where l.Titulo.Contains(titulo)
+                               select new {
+                                id = l.Id,
+                                titulo = l.Titulo,
+                                descripcion = l.Descripcion,
+                                fecha = l.FechaPublicacion,
+                                autor = p.Nombre,
+                                categoria = c.Nombre
+                               }).ToListAsync();
 
             if (libro == null)
             {
@@ -81,38 +112,28 @@ namespace BibliotecaApi.Controllers
         [HttpGet("GetByCategoria")]
         public async Task<IActionResult> BuscarPorCategoria(string categoria)
         {    
-            var categorias = await _context.Categorias
-                                  .Where(e => e.Nombre.Contains(categoria))
-                                  .FirstOrDefaultAsync();
+            var libro = await (from l in _context.Libros
+                               join lc in _context.LibrosCategorias on l.Id equals lc.LibroId
+                               join c in _context.Categorias on lc.CategoriaId equals c.Id
+                               join la in _context.AutoresLibros on l.Id equals la.LibroId
+                               join a in _context.Autores on la.AutorId equals a.Id
+                               join p in _context.Personas on a.PersonaId equals p.Id
+                               where c.Nombre.Contains(categoria)
+                               select new {
+                                id = l.Id,
+                                titulo = l.Titulo,
+                                descripcion = l.Descripcion,
+                                fecha = l.FechaPublicacion,
+                                autor = p.Nombre,
+                                categoria = c.Nombre
+                               }).ToListAsync();
 
-            if (categorias == null)
+            if (libro == null)
             {
-                return NotFound("No se ha encontrado ningún libro de esa categoría.");
-            } else
-            {
-
-                var libroCategoria = await _context.LibrosCategorias
-                                           .Where(e => e.CategoriaId == categorias.Id)
-                                           .FirstOrDefaultAsync();
-
-                if (libroCategoria == null)
-                {
-                    return NotFound("No se ha encontrado ningún libro de esa categoría.");
-                }  else
-                {
-                    var libro = await _context.Libros
-                                      .Where(r => r.Id == libroCategoria.LibroId)
-                                      .FirstOrDefaultAsync();
-
-                    if (libro == null)
-                    {
-                        return NotFound("No se ha encontrado ningún libro de esa categoría.");
-                    }
-
-                    return Ok(libro);
-                }
-   
+                return NotFound("No se ha encontrado ningún libro de ese título.");
             }
+
+            return Ok(libro);
         }
 
         [HttpPost]
@@ -120,13 +141,15 @@ namespace BibliotecaApi.Controllers
         {
             await ValidateLibro(request);
 
-            if (!_errors.Any())
+            if (_errors.Count == 0)
             {
                 var libro = new Libro
                 {
                     Titulo = request.Titulo,
                     Descripcion = request.Descripcion,
-                    FechaPublicacion = request.FechaPublicacion
+                    FechaPublicacion = new DateTime(request.FechaPublicacion.Year,
+                                                    request.FechaPublicacion.Month,
+                                                    request.FechaPublicacion.Day)
                 };
 
                 _context.Libros.Add(libro);
@@ -177,7 +200,9 @@ namespace BibliotecaApi.Controllers
 
                 libro!.Titulo = request.Titulo;
                 libro.Descripcion = request.Descripcion;
-                libro.FechaPublicacion = request.FechaPublicacion;
+                libro.FechaPublicacion = new DateTime(request.FechaPublicacion.Year,
+                                                      request.FechaPublicacion.Month,
+                                                      request.FechaPublicacion.Day);
                 _context.Entry(libro).State = EntityState.Modified;
 
                 await _context.SaveChangesAsync();
@@ -214,8 +239,8 @@ namespace BibliotecaApi.Controllers
                               .Where(r => r.Id == request.LibroId)
                               .FirstOrDefaultAsync();
 
-            var autorLibro = await _context.AutoresLibros
-                                   .Where(r => r.LibroId != request.LibroId)
+            var autoresLibro = await _context.AutoresLibros
+                                   .Where(r => r.LibroId == request.LibroId)
                                    .ToListAsync();
 
             var libroCategoria = await _context.LibrosCategorias
@@ -227,24 +252,14 @@ namespace BibliotecaApi.Controllers
             if (libro == null)
             {
                 _errors.Add("El libro especificado no existe.");
-            } else
-            {
-                if (autorLibro == null)
-                {
-                    _errors.Add("El libro especificado no tiene autor asignado.");
-                }
-
-                if (libroCategoria == null) {
-                    _errors.Add("El libro especificado no tiene categoría asignada.");
-                }
             }
             #endregion
 
-            if (!_errors.Any())
+            if (_errors.Count == 0)
             {
                 var response = libro;
 
-                _context.AutoresLibros.RemoveRange(autorLibro!);
+                _context.AutoresLibros.RemoveRange(autoresLibro!);
                 await _context.SaveChangesAsync();
 
                 _context.LibrosCategorias.Remove(libroCategoria!);

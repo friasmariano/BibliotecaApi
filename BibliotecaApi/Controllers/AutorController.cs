@@ -60,6 +60,15 @@ namespace BibliotecaApi.Controllers
             return BadRequest(new { Message = errors });
         }
 
+        [HttpGet("GetAll")]
+        public async Task<IActionResult> GetAll() {
+            var autores = await _context.Autores
+                        .Include(e => e.Persona)
+                        .ToListAsync();
+
+            return Ok(autores);
+        }
+
         [HttpGet]
         public async Task<IActionResult> Get(int autorId) {
             var autor = await _context.Autores
