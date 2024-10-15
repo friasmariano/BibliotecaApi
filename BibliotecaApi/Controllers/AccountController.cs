@@ -187,7 +187,7 @@ namespace BibliotecaApi.Controllers
                                     Id = e.Id,
                                     Nombre = e.Persona!.Nombre,
                                     Email = e.Email,
-                                    Rol = e.Rol!.Nombre
+                                    RolId = e.RolId
                                 })
                                 .FirstOrDefaultAsync();
 
@@ -208,7 +208,8 @@ namespace BibliotecaApi.Controllers
                                     Id = e.Id,
                                     Nombre = e.Persona!.Nombre,
                                     Email = e.Email,
-                                    Rol = e.Rol!.Nombre
+                                    RolId = e.RolId,
+                                    Contrasena = ""
                                 })
                                 .ToListAsync();
 

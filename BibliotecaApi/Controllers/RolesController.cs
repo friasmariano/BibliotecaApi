@@ -10,7 +10,6 @@ using BibliotecaApi.Requests;
 namespace BibliotecaApi.Controllers
 {
     [ApiController]
-    [Authorize]
     [Route("api/Roles")]
     public class RolesController : ControllerBase
     {
