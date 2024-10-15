@@ -14,7 +14,8 @@ namespace BibliotecaApi.Controllers
 {
     [ApiController]
     [Route("api/Account")]
-    public class AccountController : ControllerBase
+	[Authorize(Roles = "Administrador")]
+	public class AccountController : ControllerBase
     {
         private readonly BibliotecaContext _context;
         private readonly JwtTokenService _JwtTokenService;
@@ -32,6 +33,7 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpPost("Login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             #region Declaration(s)
@@ -109,9 +111,15 @@ namespace BibliotecaApi.Controllers
             return BadRequest(new { Message = errors });
         }
 
-        [HttpPost]
-        [Authorize(Policy = "Admin")]
-        public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioRequest request)
+		[HttpGet("admin-test")]
+		public IActionResult AdminTest()
+		{
+			return Ok("You are authorized as Admin.");
+		}
+
+
+		[HttpPost("CrearUsuario")]
+		public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioRequest request)
         {
             #region Declaration(s)
             List<string> errors = new();
@@ -177,7 +185,6 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Get(int userId) {
             var usuario = await _context.Usuarios
                                 .Include(r => r.Persona)
@@ -217,7 +224,6 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpPut]
-        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Put([FromBody] EditarUsuarioRequest request)
         {
             #region Declarations
@@ -293,7 +299,6 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpDelete]
-        [Authorize(Policy = "Admin")]
         public async Task<IActionResult> Delete([FromBody] EliminarUsuarioRequest request)
         {
             List<string> errors = new();

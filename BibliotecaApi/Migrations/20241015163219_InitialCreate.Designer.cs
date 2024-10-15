@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BibliotecaApi.Migrations
 {
     [DbContext(typeof(BibliotecaContext))]
-    [Migration("20241008211243_EntidadRol")]
-    partial class EntidadRol
+    [Migration("20241015163219_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -125,7 +125,7 @@ namespace BibliotecaApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<long>("CategoriaId")
+                    b.Property<long?>("CategoriaId")
                         .HasColumnType("bigint");
 
                     b.Property<long>("LibroId")
@@ -181,6 +181,10 @@ namespace BibliotecaApi.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -275,9 +279,7 @@ namespace BibliotecaApi.Migrations
                 {
                     b.HasOne("BibliotecaApi.Models.Categoria", "Categoria")
                         .WithMany()
-                        .HasForeignKey("CategoriaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CategoriaId");
 
                     b.Navigation("Categoria");
                 });

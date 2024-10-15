@@ -49,9 +49,17 @@ builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("Admin", policy =>
-        policy.RequireClaim("role", "Administrador"));
+	//options.AddPolicy("Admin", policy =>
+	//    policy.RequireClaim("role", "Administrador"));
+	options.AddPolicy("Admin", policy => policy.RequireAuthenticatedUser()); // Allow authenticated users
 });
+
+//builder.Services.AddAuthorization(options =>
+//{
+//	options.AddPolicy("Admin", policy =>
+//		policy.RequireAssertion(context =>
+//			context.User.HasClaim(c => c.Type == "role" && c.Value == "Administrador")));
+//});
 
 builder.Services.AddScoped<EmailValidator>();
 builder.Services.AddScoped<PasswordValidator>();
@@ -77,7 +85,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseCors("AllowAllOrigins");
 

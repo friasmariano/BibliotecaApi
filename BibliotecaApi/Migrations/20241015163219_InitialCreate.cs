@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BibliotecaApi.Migrations
 {
     /// <inheritdoc />
-    public partial class KeysAndRelationships : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -40,36 +40,16 @@ namespace BibliotecaApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Usuarios",
+                name: "Roles",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IdPersona = table.Column<long>(type: "bigint", nullable: false)
+                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Usuarios", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Autores",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IdPersona = table.Column<long>(type: "bigint", nullable: false),
-                    LibroId = table.Column<long>(type: "bigint", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Autores", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Autores_Libros_LibroId",
-                        column: x => x.LibroId,
-                        principalTable: "Libros",
-                        principalColumn: "Id");
+                    table.PrimaryKey("PK_Roles", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -92,26 +72,75 @@ namespace BibliotecaApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "UserTokens",
+                name: "Autores",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UsuarioId = table.Column<long>(type: "bigint", nullable: false),
-                    Token_hash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreadoEn = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ExpiraEn = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Valido = table.Column<bool>(type: "bit", nullable: false)
+                    PersonaId = table.Column<long>(type: "bigint", nullable: false),
+                    LibroId = table.Column<long>(type: "bigint", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserTokens", x => x.Id);
+                    table.PrimaryKey("PK_Autores", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_UserTokens_Usuarios_UsuarioId",
-                        column: x => x.UsuarioId,
-                        principalTable: "Usuarios",
+                        name: "FK_Autores_Libros_LibroId",
+                        column: x => x.LibroId,
+                        principalTable: "Libros",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Autores_Personas_PersonaId",
+                        column: x => x.PersonaId,
+                        principalTable: "Personas",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Usuarios",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PersonaId = table.Column<long>(type: "bigint", nullable: false),
+                    RolId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Usuarios", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Usuarios_Personas_PersonaId",
+                        column: x => x.PersonaId,
+                        principalTable: "Personas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Usuarios_Roles_RolId",
+                        column: x => x.RolId,
+                        principalTable: "Roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "LibrosCategorias",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    LibroId = table.Column<long>(type: "bigint", nullable: false),
+                    CategoriaId = table.Column<long>(type: "bigint", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LibrosCategorias", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_LibrosCategorias_Categorias_CategoriaId",
+                        column: x => x.CategoriaId,
+                        principalTable: "Categorias",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -141,21 +170,24 @@ namespace BibliotecaApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "LibrosCategorias",
+                name: "UserTokens",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    LibroId = table.Column<long>(type: "bigint", nullable: false),
-                    CategoriaId = table.Column<long>(type: "bigint", nullable: false)
+                    UsuarioId = table.Column<long>(type: "bigint", nullable: false),
+                    Token_hash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreadoEn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiraEn = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Valido = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_LibrosCategorias", x => x.Id);
+                    table.PrimaryKey("PK_UserTokens", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_LibrosCategorias_Categorias_CategoriaId",
-                        column: x => x.CategoriaId,
-                        principalTable: "Categorias",
+                        name: "FK_UserTokens_Usuarios_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "Usuarios",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -164,6 +196,11 @@ namespace BibliotecaApi.Migrations
                 name: "IX_Autores_LibroId",
                 table: "Autores",
                 column: "LibroId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Autores_PersonaId",
+                table: "Autores",
+                column: "PersonaId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AutoresLibros_AutorId",
@@ -189,6 +226,16 @@ namespace BibliotecaApi.Migrations
                 name: "IX_UserTokens_UsuarioId",
                 table: "UserTokens",
                 column: "UsuarioId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_PersonaId",
+                table: "Usuarios",
+                column: "PersonaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_RolId",
+                table: "Usuarios",
+                column: "RolId");
         }
 
         /// <inheritdoc />
@@ -199,9 +246,6 @@ namespace BibliotecaApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "LibrosCategorias");
-
-            migrationBuilder.DropTable(
-                name: "Personas");
 
             migrationBuilder.DropTable(
                 name: "UserTokens");
@@ -217,6 +261,12 @@ namespace BibliotecaApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "Libros");
+
+            migrationBuilder.DropTable(
+                name: "Personas");
+
+            migrationBuilder.DropTable(
+                name: "Roles");
         }
     }
 }
