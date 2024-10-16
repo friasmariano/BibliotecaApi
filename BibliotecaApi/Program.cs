@@ -10,6 +10,9 @@ using BibliotecaApi.Models;
 using BibliotecaApi.Validators;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI;
+using System.Data.Entity;
+using BibliotecaApi.Responses;
+using Sprache;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -109,22 +112,81 @@ using (var scope = app.Services.CreateScope()) {
     }
 }
 
-using (var scope = app.Services.CreateScope()) {
-    var userManager = 
-        scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-    
-    string email = "admin@biblioteca.com";
-    string password = "Qwerty12345*";
+using (var scope = app.Services.CreateScope())
+{
+	var services = scope.ServiceProvider;
 
-    if(await userManager.FindByEmailAsync(email) == null) {
-        var user = new IdentityUser();
-        user.UserName = email;
-        user.Email = email;
+	var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
+	var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-        await userManager.CreateAsync(user, password);
-        await userManager.AddToRoleAsync(user, "Administrador");
-    }
-   
+	var context = services.GetRequiredService<BibliotecaContext>(); 
+
+	await SeedUsersAsync(userManager, roleManager, context);
+}
+
+async Task<UserCreationResult> CreateUserIfNotExists(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, string email, string password, string role, string personaName,
+											   BibliotecaContext context)
+{
+	if (await userManager.FindByEmailAsync(email) != null)
+	{
+		return new UserCreationResult
+		{
+			Success = false,
+			Message = "Ya existe un usuario con este email."
+		};
+	}
+
+	var user = new IdentityUser
+	{
+		UserName = email,
+		Email = email
+	};
+
+	var result = await userManager.CreateAsync(user, password);
+
+	if (result.Succeeded)
+	{
+		if (await roleManager.FindByNameAsync(role) == null)
+		{
+			return new UserCreationResult
+			{
+				Success = false,
+				Message = "El rol especificado no existe."
+			};
+		}
+
+		await userManager.AddToRoleAsync(user, role);
+
+		var persona = new Persona { Nombre = personaName };
+		await context.Personas.AddAsync(persona);
+		await context.SaveChangesAsync();
+
+		await context.PersonasUser.AddAsync(new PersonaUser
+		{
+			AspNetUserId = user.Id,
+			PersonaId = persona.Id
+		});
+		await context.SaveChangesAsync();
+
+		return new UserCreationResult
+		{
+			Success = true,
+			Message = "El usuario ha sido creado.",
+			User = user
+		};
+	}
+
+	return new UserCreationResult
+	{
+		Success = false,
+		Message = "No fue posible crear el usuario: " + string.Join(", ", result.Errors.Select(e => e.Description))
+	};
+}
+
+async Task SeedUsersAsync(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, BibliotecaContext context)
+{
+	var adminUser = await CreateUserIfNotExists(userManager, roleManager, "admin@biblioteca.com", "Qwerty12345*", "Administrador", "Administrador", context);
+	var bibliotecarioUser = await CreateUserIfNotExists(userManager, roleManager, "bibliotecario@biblioteca.com", "Qwerty12345*", "Bibliotecario", "Bibliotecario", context);
 }
 
 app.Run();

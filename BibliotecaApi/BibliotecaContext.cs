@@ -1,10 +1,12 @@
 ﻿using BibliotecaApi.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace BibliotecaApi
 {
-    public class BibliotecaContext : DbContext
-    {
+    public class BibliotecaContext : IdentityDbContext<IdentityUser>
+	{
         public BibliotecaContext(DbContextOptions<BibliotecaContext> options)
             : base(options)
         {
@@ -17,8 +19,6 @@ namespace BibliotecaApi
         public DbSet<Libro> Libros { get; set; }
         public DbSet<LibroCategoria> LibrosCategorias { get; set;}
         public DbSet<Persona> Personas { get; set; }
-        public DbSet<Rol> Roles { get; set; }
-        public DbSet<UsuarioToken> UserTokens { get; set; }
-        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<PersonaUser> PersonasUser { get; set; }
     }
 }
