@@ -9,8 +9,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Sprache;
+using System.Data.Entity;
 using System.IdentityModel.Tokens.Jwt;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BibliotecaApi.Controllers
 {
@@ -24,10 +25,11 @@ namespace BibliotecaApi.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly PasswordValidator _passwordValidator;
         private readonly EmailValidator _emailValidator;
+        private readonly JwtTokenService _jwtTokenService;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, 
+        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager,
                                  RoleManager<IdentityRole> roleManager, BibliotecaContext context, PasswordValidator passwordValidator,
-                                 EmailValidator emailValidator)
+                                 EmailValidator emailValidator, JwtTokenService jwtTokenService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -35,9 +37,83 @@ namespace BibliotecaApi.Controllers
             _context = context;
             _emailValidator = emailValidator;
             _passwordValidator = passwordValidator;
+            _jwtTokenService = jwtTokenService;
         }
 
-        [HttpPost("CrearUsuario")]
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login(LoginRequest request)
+        {
+            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest(new { Message = "El email y la contraseña son obligatorios." });
+            }
+
+            var user = await _userManager.FindByEmailAsync(request.Email);
+
+            if (user == null)
+            {
+                return Unauthorized(new { Message = "Usuario no encontrado." });
+            }
+
+            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
+
+            if (!result.Succeeded)
+            {
+                return Unauthorized(new { Message = "Credenciales incorrectas." });
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var userRole = roles.FirstOrDefault();
+
+            if (roles == null || userRole == null) {
+				return BadRequest(new { Message = "El usuario no tiene rol(es) asignado(s)." });
+			}
+            else
+            {
+				var token = _jwtTokenService.GenerateToken(user.Id, userRole);
+
+				#region TokenParsing
+				var handler = new JwtSecurityTokenHandler();
+				var jwtToken = handler.ReadJwtToken(token);
+
+				var expClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "exp")?.Value;
+
+				var expDate = new DateTime();
+
+				if (expClaim != null && long.TryParse(expClaim, out long expUnix))
+				{
+					expDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+				}
+				#endregion
+
+				//var userToken = new UsuarioToken
+				//{
+				//	UsuarioId = user.Id,
+				//	Token_hash = token,
+				//	CreadoEn = DateTime.Now,
+				//	ExpiraEn = expDate,
+				//	Valido = true
+				//};
+
+				//_context.UserTokens.Add(userToken);
+				//await _context.SaveChangesAsync();
+
+				return Ok(new
+				{
+					Message = "Inicio de sesión exitoso.",
+					Token = token,
+					User = new
+					{
+						user.Id,
+						user.Email,
+						user.UserName
+					}
+				});
+			}
+		}
+
+
+		[HttpPost("CrearUsuario")]
         public async Task<IActionResult> CrearUsuario(CrearUsuarioRequest request)
         {
 			ValidationResult emailResult = _emailValidator.Validate(request.Email);
@@ -142,15 +218,6 @@ namespace BibliotecaApi.Controllers
         public async Task<IActionResult> Get(string userId)
         {
             var usuario = await _userManager.FindByIdAsync(userId);
-            var persona = await (from pu in _context.PersonasUser
-                                 join p in _context.Personas on pu.PersonaId equals p.Id
-                                 where pu.AspNetUserId == userId
-                                 select new
-                                 {
-                                     p.Nombre
-                                 })
-                                 .FirstOrDefaultAsync();
-
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -162,331 +229,131 @@ namespace BibliotecaApi.Controllers
                 {
                     return NotFound(new { Message = "No se ha encontrado ningún usuario con ese id." });
                 }
+            }
 
-                if (persona == null)
-                {
-					return NotFound(new { Message = "No se ha encontrado ninguna persona con ese id." });
+            return Ok(new { usuario.Id, usuario.UserName, usuario.Email });
+        }
+
+		[HttpGet("GetAllUsers")]
+		public async Task<IActionResult> GetAllUsers()
+		{
+			var usuarios = await _userManager.Users.ToListAsync();
+
+			if (usuarios.Count == 0)
+			{
+				return NotFound(new { Message = "No se encontraron usuarios." });
+			}
+
+			//var userList = from u in usuarios
+			//			   join p in personas on u.Id equals p.AspNetUserId into userPersonas
+			//			   from persona in userPersonas
+			//			   select new
+			//			   {
+			//				   u.Id,
+			//				   u.UserName,
+			//				   u.Email,
+			//				   Nombre = persona!.Nombre
+			//			   };
+
+			return Ok(usuarios);
+		}
+
+		[HttpPut("ActualizarUsuario")]
+		public async Task<IActionResult> ActualizarUsuario(string userId, ActualizarUsuarioRequest request)
+		{
+			List<string> errors = new();
+
+			var user = await _userManager.FindByIdAsync(userId);
+
+
+			#region Validation(s)
+			if (user == null)
+			{
+				return NotFound(new { Message = "Usuario no encontrado." });
+			}
+
+			if (string.IsNullOrEmpty(request.Nombre))
+			{
+				errors.Add("El nombre no es válido.");
+				return BadRequest(errors);
+			}
+
+			if (string.IsNullOrEmpty(request.Password))
+			{
+				errors.Clear();
+				errors.Add("La contraseña no puede estar vacía.");
+				return BadRequest(errors);
+			}
+			#endregion
+
+			var removePasswordResult = await _userManager.RemovePasswordAsync(user);
+			if (!removePasswordResult.Succeeded)
+			{
+				return BadRequest( new { removePasswordResult.Errors });
+			}
+
+			var addPasswordResult = await _userManager.AddPasswordAsync(user, request.Password);
+			if (!addPasswordResult.Succeeded)
+			{
+				return BadRequest( new { addPasswordResult.Errors });
+			}
+
+			var personaUser = await _context.PersonasUser.FirstOrDefaultAsync(pu => pu.AspNetUserId == user.Id);
+
+			if (personaUser != null)
+			{
+				var persona = await _context.Personas.FindAsync(personaUser.PersonaId);
+				if (persona != null)
+				{
+					persona.Nombre = request.Nombre;
+					_context.Personas.Update(persona);
+					await _context.SaveChangesAsync();
 				}
-            }
+			}
+			else
+			{
+				return NotFound(new { Message = "Persona asociada no encontrada." });
+			}
 
-            return Ok(new { usuario.Id, usuario.UserName, usuario.Email, persona!.Nombre });
-        }
-
-        // [HttpPost("AddMainUsersToPersonas")]
+			return Ok(new { Message = "El nombre y la contraseña han sido actualizados correctamente." });
+		}
 
 
-		/*
-        [HttpPost("Login")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
-        {
-            #region Declaration(s)
-            long? idUser = null;
-            List<string> errors = new();
-            ValidationResult emailResult = _emailValidator.Validate(request.Email);
-            var user = await _context.Usuarios
-                            .Include(u => u.Persona)
-                            .Include(u => u.Rol)
-                            .Where(u => u.Email == request.Email)
-                            .FirstOrDefaultAsync();
-            #endregion
+		[HttpDelete("EliminarUsuario")]
+		public async Task<IActionResult> EliminarUsuario(string userId)
+		{
+			var user = await _userManager.FindByIdAsync(userId);
 
-            #region Validations
-            if (!emailResult.IsValid)
-            {
-                foreach (var error in emailResult.Errors)
-                {
-                    errors.Add(error.ErrorMessage);
-                }
-            }
-            else
-            {
-                if (user == null)
-                {
-                    errors.Add("Credenciales inválidas.");
-                }
-                else
-                {
-                    bool isValid = _passwordHashValidator.ValidatePassword(user.Password, request.Password);
+			if (user == null)
+			{
+				return NotFound(new { Message = "Usuario no encontrado." });
+			}
 
-                    if (!isValid)
-                    {
-                        return Unauthorized("El usuario o la clave es inválido.");
-                    }
-                }
-            }
-            #endregion
+			var personaUser = await _context.PersonasUser.FirstOrDefaultAsync(pu => pu.AspNetUserId == user.Id);
 
-            if (!errors.Any())
-            {
-                var token = _JwtTokenService.GenerateToken(user!.Id.ToString(), user!.Rol!.Nombre);
-                idUser = user.Id;
+			if (personaUser != null)
+			{
+				var persona = await _context.Personas.FindAsync(personaUser.PersonaId);
 
-                #region TokenParsing
-                var handler = new JwtSecurityTokenHandler();
-                var jwtToken = handler.ReadJwtToken(token);
+				if (persona != null)
+				{
+					_context.Personas.Remove(persona);
+				}
 
-                var expClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "exp")?.Value;
+				_context.PersonasUser.Remove(personaUser);
+				await _context.SaveChangesAsync();
+			}
 
-                var expDate = new DateTime();
+			var result = await _userManager.DeleteAsync(user);
 
-                if (expClaim != null && long.TryParse(expClaim, out long expUnix))
-                {
-                    expDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
-                }
-                #endregion
+			if (result.Succeeded)
+			{
+				return Ok(new { Message = "Usuario y sus datos asociados han sido eliminados correctamente." });
+			}
 
-                var userToken = new UsuarioToken
-                {
-                    UsuarioId = user.Id,
-                    Token_hash = token,
-                    CreadoEn = DateTime.Now,
-                    ExpiraEn = expDate,
-                    Valido = true,
-                    Usuario = user,
-                };
+			return BadRequest(new { Errors = result.Errors });
+		}
 
-                _context.UserTokens.Add(userToken);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { Token = token });
-            }
-
-            return BadRequest(new { Message = errors });
-        }
-
-        [HttpPost("CrearUsuario")]
-        public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioRequest request)
-        {
-            #region Declaration(s)
-            List<string> errors = new();
-            ValidationResult emailResult = _emailValidator.Validate(request.Email);
-            ValidationResult passwordResult = _passwordValidator.Validate(request.Password);
-            var rol = await _context.Roles
-                        .Where(r => r.Id == request.RolId)
-                        .FirstOrDefaultAsync();
-            #endregion
-
-            #region Validation(s)
-            if (string.IsNullOrEmpty(request.Nombre))
-            {
-                errors.Add("El nombre no es válido.");
-            }
-
-            if (!emailResult.IsValid)
-            {
-                foreach (var error in emailResult.Errors)
-                {
-                    errors.Add(error.ErrorMessage);
-                }
-            }
-
-            if (!passwordResult.IsValid)
-            {
-                foreach (var error in passwordResult.Errors)
-                {
-                    errors.Add(error.ErrorMessage);
-                }
-            }
-
-            if (rol == null)
-            {
-                errors.Add("El rol especificado no existe.");
-            }
-            #endregion
-
-            if (!errors.Any())
-            {
-
-                var persona = new Persona
-                {
-                    Nombre = request.Nombre
-                };
-
-                await _context.Personas.AddAsync(persona);
-                await _context.SaveChangesAsync();
-
-                var usuario = new Usuario
-                {
-                    Email = request.Email,
-                    Password = _passwordHashValidator.GenerateHash(request.Password),
-                    PersonaId = persona.Id,
-                    RolId = request.RolId
-                };
-
-                await _context.Usuarios.AddAsync(usuario);
-                await _context.SaveChangesAsync();
-
-                Response.StatusCode = StatusCodes.Status201Created;
-                return CreatedAtAction(nameof(CrearUsuario), new { id = usuario.Id }, usuario);
-            }
-
-            return BadRequest(new { Message = errors });
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Get(int userId)
-        {
-            var usuario = await _context.Usuarios
-                                .Include(r => r.Persona)
-                                .Include(r => r.Rol)
-                                .Where(e => e.Id == userId)
-                                .Select(e => new UsuarioReadResponse
-                                {
-                                    Id = e.Id,
-                                    Nombre = e.Persona!.Nombre,
-                                    Email = e.Email,
-                                    RolId = e.RolId
-                                })
-                                .FirstOrDefaultAsync();
-
-            if (usuario == null)
-            {
-                return BadRequest(new { Message = "El usuario especificado no existe." });
-            }
-
-            return Ok(usuario);
-        }
-
-        [HttpGet("GetAll")]
-        [Authorize(Roles = "Administrador")]
-        public async Task<IActionResult> GetAll()
-        {
-            var usuario = await _context.Usuarios
-                                .Include(r => r.Persona)
-                                .Include(r => r.Rol)
-                                .Select(e => new UsuarioReadResponse
-                                {
-                                    Id = e.Id,
-                                    Nombre = e.Persona!.Nombre,
-                                    Email = e.Email,
-                                    RolId = e.RolId,
-                                    Contrasena = ""
-                                })
-                                .ToListAsync();
-
-            return Ok(usuario);
-        }
-
-        [HttpPut]
-        public async Task<IActionResult> Put([FromBody] EditarUsuarioRequest request)
-        {
-            #region Declarations
-            List<string> errors = new();
-            var usuario = await _context.Usuarios
-                          .Include(e => e.Persona)
-                          .Include(e => e.Rol)
-                          .Where(e => e.Id == request.UsuarioId)
-                          .FirstOrDefaultAsync();
-            ValidationResult emailResult = _emailValidator.Validate(request.Email);
-            ValidationResult passwordResult = _passwordValidator.Validate(request.Password);
-            #endregion
-
-            #region Validations
-            if (usuario == null)
-            {
-                errors.Add("El usuario no existe.");
-            }
-            else
-            {
-                var rol = await _context.Roles
-                            .Where(r => r.Id == usuario.RolId)
-                            .FirstOrDefaultAsync();
-
-                if (rol == null)
-                {
-                    errors.Add("El rol especificado no existe.");
-                }
-
-            }
-
-            if (string.IsNullOrEmpty(request.Nombre))
-            {
-                errors.Add("El nombre no es válido.");
-            }
-
-            if (!emailResult.IsValid)
-            {
-                foreach (var error in emailResult.Errors)
-                {
-                    errors.Add(error.ErrorMessage);
-                }
-            }
-
-            if (!passwordResult.IsValid)
-            {
-                foreach (var error in passwordResult.Errors)
-                {
-                    errors.Add(error.ErrorMessage);
-                }
-            }
-            #endregion
-
-            if (!errors.Any())
-            {
-                var persona = await _context.Personas
-                                    .Where(e => e.Id == usuario!.PersonaId)
-                                    .FirstOrDefaultAsync();
-
-                persona!.Nombre = request.Nombre;
-                _context.Entry(persona).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                usuario!.Email = request.Email;
-                usuario!.RolId = usuario.RolId;
-                usuario!.Password = _passwordHashValidator.GenerateHash(request.Password);
-
-                _context.Entry(usuario).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                return Ok(usuario);
-            }
-
-            return BadRequest(new { Message = "No ha sido posible modificar el usuario." });
-        }
-
-        [HttpDelete]
-        public async Task<IActionResult> Delete([FromBody] EliminarUsuarioRequest request)
-        {
-            List<string> errors = new();
-            var usuario = await _context.Usuarios
-                                .Include(e => e.Persona)
-                                .Include(e => e.Rol)
-                                .Where(e => e.Id == request.UsuarioId)
-                                .FirstOrDefaultAsync();
-
-            if (usuario == null)
-            {
-                errors.Add("El usuario especificado no existe.");
-            }
-
-            if (!errors.Any())
-            {
-                var response = usuario;
-
-                var tokens = await _context.UserTokens
-                                   .Where(e => e.UsuarioId == usuario!.Id)
-                                   .ToListAsync();
-
-                _context.UserTokens.RemoveRange(tokens);
-                await _context.SaveChangesAsync();
-
-                _context.Usuarios.Remove(usuario!);
-                await _context.SaveChangesAsync();
-
-                var persona = await _context.Personas
-                                    .Where(e => e.Id == usuario!.Id)
-                                    .FirstOrDefaultAsync();
-
-                _context.Personas.Remove(persona!);
-                await _context.SaveChangesAsync();
-
-                return Ok(response);
-            }
-
-            return BadRequest(new { Message = "No ha sido posible eliminar el usuario." });
-        }
-
-    */
-    }
- }
+		// ROLES CRUD
+	}
+}
