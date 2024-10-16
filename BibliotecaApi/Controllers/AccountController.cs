@@ -14,7 +14,6 @@ namespace BibliotecaApi.Controllers
 {
     [ApiController]
     [Route("api/Account")]
-	[Authorize(Roles = "Administrador")]
 	public class AccountController : ControllerBase
     {
         private readonly BibliotecaContext _context;
@@ -111,13 +110,6 @@ namespace BibliotecaApi.Controllers
             return BadRequest(new { Message = errors });
         }
 
-		[HttpGet("admin-test")]
-		public IActionResult AdminTest()
-		{
-			return Ok("You are authorized as Admin.");
-		}
-
-
 		[HttpPost("CrearUsuario")]
 		public async Task<IActionResult> CrearUsuario([FromBody] CrearUsuarioRequest request)
         {
@@ -206,7 +198,7 @@ namespace BibliotecaApi.Controllers
         }
 
         [HttpGet("GetAll")]
-        // [Authorize(Policy = "Admin")]
+        [Authorize(Roles = "Administrador")]
         public async Task<IActionResult> GetAll() {
             var usuario = await _context.Usuarios
                                 .Include(r => r.Persona)

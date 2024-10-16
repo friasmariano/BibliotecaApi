@@ -8,6 +8,9 @@ using BibliotecaApi.Services;
 using FluentValidation;
 using BibliotecaApi.Models;
 using BibliotecaApi.Validators;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI;
+
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -20,6 +23,10 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<BibliotecaContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+    .AddEntityFrameworkStores<BibliotecaContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -45,21 +52,17 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+
+// Adding Identity services with roles
+// builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+// {
+//     options.SignIn.RequireConfirmedAccount = true;
+// })
+// .AddRoles<IdentityRole>()  // Enable role management
+// .AddEntityFrameworkStores<BibliotecaContext>();  // Use EF Core for storing identity info
+
+////////////////////////
 builder.Services.AddScoped<JwtTokenService>();
-
-builder.Services.AddAuthorization(options =>
-{
-	//options.AddPolicy("Admin", policy =>
-	//    policy.RequireClaim("role", "Administrador"));
-	options.AddPolicy("Admin", policy => policy.RequireAuthenticatedUser()); // Allow authenticated users
-});
-
-//builder.Services.AddAuthorization(options =>
-//{
-//	options.AddPolicy("Admin", policy =>
-//		policy.RequireAssertion(context =>
-//			context.User.HasClaim(c => c.Type == "role" && c.Value == "Administrador")));
-//});
 
 builder.Services.AddScoped<EmailValidator>();
 builder.Services.AddScoped<PasswordValidator>();
@@ -94,5 +97,34 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope()) {
+    var roleManager = 
+        scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    var roles = new[] {"Administrador", "Bibliotecario"};
+
+    foreach (var role in roles) {
+        if (!await roleManager.RoleExistsAsync(role))
+            await roleManager.CreateAsync(new IdentityRole(role));
+    }
+}
+
+using (var scope = app.Services.CreateScope()) {
+    var userManager = 
+        scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+    
+    string email = "admin@biblioteca.com";
+    string password = "Qwerty12345*";
+
+    if(await userManager.FindByEmailAsync(email) == null) {
+        var user = new IdentityUser();
+        user.UserName = email;
+        user.Email = email;
+
+        await userManager.CreateAsync(user, password);
+        await userManager.AddToRoleAsync(user, "Administrador");
+    }
+   
+}
 
 app.Run();
