@@ -8,16 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ed584ddc-3bae-4e5b-9456-63b464b6a3e9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Responses/RolesGetResponse.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/BibliotecaApi.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/BibliotecaApi.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Services/JwtTokenService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Services/JwtTokenService.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/appsettings.Development.json" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/appsettings.Development.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" afterDir="false" />
-    </list>
+    <list default="true" id="ed584ddc-3bae-4e5b-9456-63b464b6a3e9" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -29,6 +20,7 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 7
@@ -97,13 +89,23 @@
       <updated>1728607244186</updated>
       <workItem from="1728607246078" duration="59000" />
       <workItem from="1728662214428" duration="813000" />
-      <workItem from="1729133696651" duration="4964000" />
+      <workItem from="1729133696651" duration="5157000" />
     </task>
+    <task id="LOCAL-00001" summary="Updates en UserManager y Roles">
+      <option name="closed" value="true" />
+      <created>1729139139901</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1729139139901</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -119,5 +121,7 @@
   <component name="VcsManagerConfiguration">
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+    <MESSAGE value="Updates en UserManager y Roles" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updates en UserManager y Roles" />
   </component>
 </project>

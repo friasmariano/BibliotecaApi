@@ -363,6 +363,5 @@ namespace BibliotecaApi.Controllers
 			
 			return Ok(roles);
 		}
-		// ROLES CRUD
 	}
 }
