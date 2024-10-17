@@ -234,28 +234,29 @@ namespace BibliotecaApi.Controllers
             return Ok(new { usuario.Id, usuario.UserName, usuario.Email });
         }
 
-		[HttpGet("GetAllUsers")]
-		public async Task<IActionResult> GetAllUsers()
+		[HttpGet("GetAll")]
+		public async Task<IActionResult> GetAll()
 		{
-			var usuarios = await _userManager.Users.ToListAsync();
+			var usuarios = _userManager.Users.ToList();
 
 			if (usuarios.Count == 0)
 			{
 				return NotFound(new { Message = "No se encontraron usuarios." });
 			}
 
-			//var userList = from u in usuarios
-			//			   join p in personas on u.Id equals p.AspNetUserId into userPersonas
-			//			   from persona in userPersonas
-			//			   select new
-			//			   {
-			//				   u.Id,
-			//				   u.UserName,
-			//				   u.Email,
-			//				   Nombre = persona!.Nombre
-			//			   };
-
-			return Ok(usuarios);
+			var listaUsuarios = 
+				
+				from uList in usuarios
+				join pUser in _context.PersonasUser on uList.Id equals pUser.AspNetUserId
+				join p in _context.Personas on pUser.PersonaId equals p.Id
+				select new
+				{
+					uList.Id,
+					uList.Email,
+					p.Nombre,
+				};
+					
+			return Ok(listaUsuarios);
 		}
 
 		[HttpPut("ActualizarUsuario")]
@@ -354,6 +355,14 @@ namespace BibliotecaApi.Controllers
 			return BadRequest(new { Errors = result.Errors });
 		}
 
+		[HttpGet("GetRoles")]
+		[Authorize(Roles = "Admin")]
+		public async Task<IActionResult> GetRoles()
+		{
+			var roles = _roleManager.Roles.ToList();
+			
+			return Ok(roles);
+		}
 		// ROLES CRUD
 	}
 }

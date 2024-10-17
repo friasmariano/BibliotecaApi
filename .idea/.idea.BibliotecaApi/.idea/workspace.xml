@@ -9,12 +9,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ed584ddc-3bae-4e5b-9456-63b464b6a3e9" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Responses/RolesGetResponse.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/BibliotecaApi.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/BibliotecaApi.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Services/JwtTokenService.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Services/JwtTokenService.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/appsettings.Development.json" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/appsettings.Development.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DpaMonitoringSettings">
+    <option name="autoShow" value="false" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -24,6 +34,9 @@
   &quot;associatedIndex&quot;: 7
 }</component>
   <component name="ProjectId" id="2nGlMAhzdPJc9OxuMjQMkV5D1mV" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -38,7 +51,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.customizations",
+    "settings.editor.selected.configurable": "preferences.keymap",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -84,6 +97,7 @@
       <updated>1728607244186</updated>
       <workItem from="1728607246078" duration="59000" />
       <workItem from="1728662214428" duration="813000" />
+      <workItem from="1729133696651" duration="4964000" />
     </task>
     <servers />
   </component>
@@ -91,6 +105,17 @@
     <option name="version" value="3" />
   </component>
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />

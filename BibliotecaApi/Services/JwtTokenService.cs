@@ -31,7 +31,7 @@ namespace BibliotecaApi.Services
                 {
                     new Claim(JwtRegisteredClaimNames.Sub, userId),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                    new Claim("role", userRole)
+                    new Claim(ClaimTypes.Role, userRole)
                 };
 
                 var token = new JwtSecurityToken

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BibliotecaApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,10 +10,7 @@ using FluentValidation;
 using BibliotecaApi.Models;
 using BibliotecaApi.Validators;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI;
-using System.Data.Entity;
 using BibliotecaApi.Responses;
-using Sprache;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,7 +49,8 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = configuration["JwtSettings:Issuer"],
         ValidAudience = configuration["JwtSettings:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+        RoleClaimType = ClaimTypes.Role
     };
 });
 
@@ -104,7 +103,7 @@ using (var scope = app.Services.CreateScope()) {
     var roleManager = 
         scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-    var roles = new[] {"Administrador", "Bibliotecario"};
+    var roles = new[] {"Admin", "Librarian"};
 
     foreach (var role in roles) {
         if (!await roleManager.RoleExistsAsync(role))
@@ -185,8 +184,8 @@ async Task<UserCreationResult> CreateUserIfNotExists(UserManager<IdentityUser> u
 
 async Task SeedUsersAsync(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, BibliotecaContext context)
 {
-	var adminUser = await CreateUserIfNotExists(userManager, roleManager, "admin@biblioteca.com", "Qwerty12345*", "Administrador", "Administrador", context);
-	var bibliotecarioUser = await CreateUserIfNotExists(userManager, roleManager, "bibliotecario@biblioteca.com", "Qwerty12345*", "Bibliotecario", "Bibliotecario", context);
+	var adminUser = await CreateUserIfNotExists(userManager, roleManager, "admin@biblioteca.com", "Qwerty12345*", "Admin", "Administrator", context);
+	var bibliotecarioUser = await CreateUserIfNotExists(userManager, roleManager, "bibliotecario@biblioteca.com", "Qwerty12345*", "Librarian", "Librarian", context);
 }
 
 app.Run();
