@@ -356,12 +356,27 @@ namespace BibliotecaApi.Controllers
 		}
 
 		[HttpGet("GetRoles")]
-		[Authorize(Roles = "Admin")]
-		public async Task<IActionResult> GetRoles()
+		// Move custom role validation to a service
+		public async Task<IActionResult> GetRoles(string userId)
 		{
-			var roles = _roleManager.Roles.ToList();
+			var usuario = await _userManager.FindByIdAsync(userId);
+
+			if (usuario == null)
+			{
+				return NotFound(new { Errors = "No se encontró ningún usuario con ese id." });
+			}
+
+			var userRoles = await _userManager.GetRolesAsync(usuario);
+   
+			if (!userRoles.Contains("Admin"))
+			{
+				return StatusCode(403, new { Errors = "No está autorizado para acceder a este recurso." });
+			}
 			
+			var roles = _roleManager.Roles.ToList();
+    
 			return Ok(roles);
 		}
+
 	}
 }
