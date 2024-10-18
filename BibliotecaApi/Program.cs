@@ -10,65 +10,85 @@ using FluentValidation;
 using BibliotecaApi.Models;
 using BibliotecaApi.Validators;
 using Microsoft.AspNetCore.Identity;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using BibliotecaApi.Responses;
-
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
 
-Env.Load();
-
-var secretKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") + "";
-
-builder.Services.AddControllers();
-
 builder.Services.AddDbContext<BibliotecaContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-builder.Services.AddIdentity<IdentityUser, IdentityRole>()
-    .AddEntityFrameworkStores<BibliotecaContext>()
-    .AddDefaultTokenProviders();
-
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-
-// JWT Configuration
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = configuration["JwtSettings:Issuer"],
-        ValidAudience = configuration["JwtSettings:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        RoleClaimType = ClaimTypes.Role
-    };
-});
-
-
-// Adding Identity services with roles
-// builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-// {
-//     options.SignIn.RequireConfirmedAccount = true;
-// })
-// .AddRoles<IdentityRole>()  // Enable role management
-// .AddEntityFrameworkStores<BibliotecaContext>();  // Use EF Core for storing identity info
-
-////////////////////////
-builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddScoped<EmailValidator>();
 builder.Services.AddScoped<PasswordValidator>();
 builder.Services.AddScoped<PasswordHashValidator>();
+
+// Adding authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(o =>
+{
+    o.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey
+            (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? string.Empty)),
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ClockSkew = TimeSpan.Zero // required if the expire time is <5 minutes
+    };
+});
+
+//Adding authorization
+// builder.Services.AddAuthorization(); //Used if no authorization policy required
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("admin_policy", policy => policy.RequireRole("admin"));
+
+// Swagger Authorization
+builder.Services.AddSwaggerGen(option =>
+{
+    option.SwaggerDoc("v1", new OpenApiInfo { Title = "Biblioteca Api", Version = "v1" });
+    option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Description = "Please enter a valid token",
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        BearerFormat = "JWT",
+        Scheme = "Bearer"
+    });
+    option.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type=ReferenceType.SecurityScheme,
+                    Id="Bearer"
+                }
+            },
+            new string[]{}
+        }
+    });
+});
+
+builder.Services.AddControllers();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(options =>
 {
@@ -90,7 +110,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseCors("AllowAllOrigins");
 
@@ -99,93 +119,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope()) {
-    var roleManager = 
-        scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-    var roles = new[] {"Admin", "Librarian"};
-
-    foreach (var role in roles) {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole(role));
-    }
-}
-
-using (var scope = app.Services.CreateScope())
-{
-	var services = scope.ServiceProvider;
-
-	var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
-	var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-
-	var context = services.GetRequiredService<BibliotecaContext>(); 
-
-	await SeedUsersAsync(userManager, roleManager, context);
-}
-
-async Task<UserCreationResult> CreateUserIfNotExists(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, string email, string password, string role, string personaName,
-											   BibliotecaContext context)
-{
-	if (await userManager.FindByEmailAsync(email) != null)
-	{
-		return new UserCreationResult
-		{
-			Success = false,
-			Message = "Ya existe un usuario con este email."
-		};
-	}
-
-	var user = new IdentityUser
-	{
-		UserName = email,
-		Email = email
-	};
-
-	var result = await userManager.CreateAsync(user, password);
-
-	if (result.Succeeded)
-	{
-		if (await roleManager.FindByNameAsync(role) == null)
-		{
-			return new UserCreationResult
-			{
-				Success = false,
-				Message = "El rol especificado no existe."
-			};
-		}
-
-		await userManager.AddToRoleAsync(user, role);
-
-		var persona = new Persona { Nombre = personaName };
-		await context.Personas.AddAsync(persona);
-		await context.SaveChangesAsync();
-
-		await context.PersonasUser.AddAsync(new PersonaUser
-		{
-			AspNetUserId = user.Id,
-			PersonaId = persona.Id
-		});
-		await context.SaveChangesAsync();
-
-		return new UserCreationResult
-		{
-			Success = true,
-			Message = "El usuario ha sido creado.",
-			User = user
-		};
-	}
-
-	return new UserCreationResult
-	{
-		Success = false,
-		Message = "No fue posible crear el usuario: " + string.Join(", ", result.Errors.Select(e => e.Description))
-	};
-}
-
-async Task SeedUsersAsync(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager, BibliotecaContext context)
-{
-	var adminUser = await CreateUserIfNotExists(userManager, roleManager, "admin@biblioteca.com", "Qwerty12345*", "Admin", "Administrator", context);
-	var bibliotecarioUser = await CreateUserIfNotExists(userManager, roleManager, "bibliotecario@biblioteca.com", "Qwerty12345*", "Librarian", "Librarian", context);
-}
+// Add default users with BibliotecaContext
 
 app.Run();

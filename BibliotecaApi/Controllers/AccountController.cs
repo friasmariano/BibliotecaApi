@@ -3,15 +3,16 @@ using BibliotecaApi.Requests;
 using BibliotecaApi.Services;
 using BibliotecaApi.Validators;
 using FluentValidation;
-using FluentValidation.Results;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Sprache;
-using System.Data.Entity;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Mvc;
+using BibliotecaApi.Controllers;
+using BibliotecaApi.Requests;
+using System.Text;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
+using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
 namespace BibliotecaApi.Controllers
 {
@@ -19,364 +20,136 @@ namespace BibliotecaApi.Controllers
     [Route("api/Account")]
     public class AccountController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
         private readonly BibliotecaContext _context;
-        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly PasswordValidator _passwordValidator;
         private readonly EmailValidator _emailValidator;
-        private readonly JwtTokenService _jwtTokenService;
+        private IConfiguration _configuration { get; }
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager,
-                                 RoleManager<IdentityRole> roleManager, BibliotecaContext context, PasswordValidator passwordValidator,
-                                 EmailValidator emailValidator, JwtTokenService jwtTokenService)
+        public AccountController(BibliotecaContext context, PasswordValidator passwordValidator,
+                                 EmailValidator emailValidator, IConfiguration configuration)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _roleManager = roleManager;
             _context = context;
             _emailValidator = emailValidator;
             _passwordValidator = passwordValidator;
-            _jwtTokenService = jwtTokenService;
+            _configuration = configuration;
         }
 
-        [HttpPost("Login")]
-        public async Task<IActionResult> Login(LoginRequest request)
+        [HttpPost("NewLogin")]
+        public async Task<IActionResult> Login(LoginRequest user)
         {
-            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
-            {
-                return BadRequest(new { Message = "El email y la contraseña son obligatorios." });
-            }
+	        var normalUser = AuthenticateNormalUser(user);
+	        var adminUser = AuthenticateAdminUser(user);
+        
+	        if (!(normalUser || adminUser))
+		        return Unauthorized();
+        
+	        var issuer = _configuration["Jwt:Issuer"];
+	        var audience = _configuration["Jwt:Audience"];
+	        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? string.Empty);
+	        var claims = new List<Claim>()
+	        {
+		        new Claim("Id", Guid.NewGuid().ToString()),
+		        new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+		        new Claim(JwtRegisteredClaimNames.Email, user.Email),
+		        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+	        };
+        
+	        if (adminUser)
+	        {
+		        claims.Add(new Claim(ClaimTypes.Role, "admin"));
+	        }
+	        var tokenDescriptor = new SecurityTokenDescriptor
+	        {
+		        Subject = new ClaimsIdentity(claims),
+		        Expires = DateTime.UtcNow.AddMinutes(5), //should be at least 5 minutes - https://github.com/IdentityServer/IdentityServer3/issues/1251
+		        Issuer = issuer,
+		        Audience = audience,
+		        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
+	        };
+        
+	        var tokenHandler = new JwtSecurityTokenHandler();
+	        var token = tokenHandler.CreateToken(tokenDescriptor);
+	        var stringToken = tokenHandler.WriteToken(token);
 
-            var user = await _userManager.FindByEmailAsync(request.Email);
-
-            if (user == null)
-            {
-                return Unauthorized(new { Message = "Usuario no encontrado." });
-            }
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
-
-            if (!result.Succeeded)
-            {
-                return Unauthorized(new { Message = "Credenciales incorrectas." });
-            }
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var userRole = roles.FirstOrDefault();
-
-            if (roles == null || userRole == null) {
-				return BadRequest(new { Message = "El usuario no tiene rol(es) asignado(s)." });
-			}
-            else
-            {
-				var token = _jwtTokenService.GenerateToken(user.Id, userRole);
-
-				#region TokenParsing
-				var handler = new JwtSecurityTokenHandler();
-				var jwtToken = handler.ReadJwtToken(token);
-
-				var expClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == "exp")?.Value;
-
-				var expDate = new DateTime();
-
-				if (expClaim != null && long.TryParse(expClaim, out long expUnix))
-				{
-					expDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
-				}
-				#endregion
-
-				//var userToken = new UsuarioToken
-				//{
-				//	UsuarioId = user.Id,
-				//	Token_hash = token,
-				//	CreadoEn = DateTime.Now,
-				//	ExpiraEn = expDate,
-				//	Valido = true
-				//};
-
-				//_context.UserTokens.Add(userToken);
-				//await _context.SaveChangesAsync();
-
-				return Ok(new
-				{
-					Message = "Inicio de sesión exitoso.",
-					Token = token,
-					User = new
-					{
-						user.Id,
-						user.Email,
-						user.UserName
-					}
-				});
-			}
-		}
-
-
-		[HttpPost("CrearUsuario")]
-        public async Task<IActionResult> CrearUsuario(CrearUsuarioRequest request)
-        {
-			ValidationResult emailResult = _emailValidator.Validate(request.Email);
-			ValidationResult passwordResult = _passwordValidator.Validate(request.Password);
-
-            var user = new IdentityUser { UserName = request.Email, Email = request.Email };
-            var result = await _userManager.CreateAsync(user, request.Password);
-
-			List<string> errors = new();
-
-			#region Validation(s)
-			if (string.IsNullOrEmpty(request.Nombre))
-			{
-				errors.Clear();
-
-				errors.Add("El nombre no es válido.");
-
-				return BadRequest(errors);
-			}
-
-			if (!emailResult.IsValid)
-			{
-				errors.Clear();
-
-				foreach (var error in emailResult.Errors)
-				{
-					errors.Add(error.ErrorMessage);
-				}
-
-				return BadRequest(errors);
-			}
-
-			if (!passwordResult.IsValid)
-			{
-				errors.Clear();
-
-				foreach (var error in passwordResult.Errors)
-				{
-					errors.Add(error.ErrorMessage);
-				}
-
-				return BadRequest(errors);
-			}
-			#endregion
-
-			if (result.Succeeded) {
-                await _signInManager.SignInAsync(user, isPersistent: false);
-
-                var persona = new Persona
-                {
-                    Nombre = request.Nombre
-                };
-
-                _context.Personas.Add(persona);
-                await _context.SaveChangesAsync();
-
-                var personaUser = new PersonaUser
-                {
-					AspNetUserId = user.Id,
-                    PersonaId = persona.Id
-				};
-
-                _context.PersonasUser.Add(personaUser);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { Message = "El usuario ha sido registrado." });
-            }
-
-            return BadRequest(new { Errors = result.Errors });
+	        return Ok(stringToken);
         }
 
-        [HttpPost("AsignarRol")]
-        public async Task<IActionResult> AsignarRol(AsignarRolRequest request)
+        
+        [HttpGet("/secure-page")]
+        [Authorize]
+        public async Task<IActionResult> SecurePage()
         {
-            List<string> errors = new();
-            var rol = await _roleManager.FindByIdAsync(request.RolId);
-            var user = await _userManager.FindByEmailAsync(request.Email);
-
-            #region Validation(s)
-            if (rol == null) {
-                errors.Add("El rol especificado no existe.");
-			}
-
-            if (user == null) {
-				errors.Add("El usuario especificado no existe.");
-			}
-			#endregion
-
-			if (errors.Count == 0)
-			{
-				var result = await _userManager.AddToRoleAsync(user!, rol!.Name!);
-				if (result.Succeeded)
-				{
-					return Ok(new { Message = "El rol ha sido asignado correctamente." });
-				}
-			}
-
-			return BadRequest(new { Message = errors });
+	        return Ok("secure page - for all authenticated users 🔐");
         }
-
-        [HttpGet("GetUser")]
-        public async Task<IActionResult> Get(string userId)
-        {
-            var usuario = await _userManager.FindByIdAsync(userId);
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return BadRequest(new { Message = "El Id del usuario no es válido." });
-            }
-            else
-            {
-                if (usuario == null)
-                {
-                    return NotFound(new { Message = "No se ha encontrado ningún usuario con ese id." });
-                }
-            }
-
-            return Ok(new { usuario.Id, usuario.UserName, usuario.Email });
-        }
-
-		[HttpGet("GetAll")]
-		public async Task<IActionResult> GetAll()
-		{
-			var usuarios = _userManager.Users.ToList();
-
-			if (usuarios.Count == 0)
-			{
-				return NotFound(new { Message = "No se encontraron usuarios." });
-			}
-
-			var listaUsuarios = 
-				
-				from uList in usuarios
-				join pUser in _context.PersonasUser on uList.Id equals pUser.AspNetUserId
-				join p in _context.Personas on pUser.PersonaId equals p.Id
-				select new
-				{
-					uList.Id,
-					uList.Email,
-					p.Nombre,
-				};
-					
-			return Ok(listaUsuarios);
-		}
-
-		[HttpPut("ActualizarUsuario")]
-		public async Task<IActionResult> ActualizarUsuario(string userId, ActualizarUsuarioRequest request)
-		{
-			List<string> errors = new();
-
-			var user = await _userManager.FindByIdAsync(userId);
-
-
-			#region Validation(s)
-			if (user == null)
-			{
-				return NotFound(new { Message = "Usuario no encontrado." });
-			}
-
-			if (string.IsNullOrEmpty(request.Nombre))
-			{
-				errors.Add("El nombre no es válido.");
-				return BadRequest(errors);
-			}
-
-			if (string.IsNullOrEmpty(request.Password))
-			{
-				errors.Clear();
-				errors.Add("La contraseña no puede estar vacía.");
-				return BadRequest(errors);
-			}
-			#endregion
-
-			var removePasswordResult = await _userManager.RemovePasswordAsync(user);
-			if (!removePasswordResult.Succeeded)
-			{
-				return BadRequest( new { removePasswordResult.Errors });
-			}
-
-			var addPasswordResult = await _userManager.AddPasswordAsync(user, request.Password);
-			if (!addPasswordResult.Succeeded)
-			{
-				return BadRequest( new { addPasswordResult.Errors });
-			}
-
-			var personaUser = await _context.PersonasUser.FirstOrDefaultAsync(pu => pu.AspNetUserId == user.Id);
-
-			if (personaUser != null)
-			{
-				var persona = await _context.Personas.FindAsync(personaUser.PersonaId);
-				if (persona != null)
-				{
-					persona.Nombre = request.Nombre;
-					_context.Personas.Update(persona);
-					await _context.SaveChangesAsync();
-				}
-			}
-			else
-			{
-				return NotFound(new { Message = "Persona asociada no encontrada." });
-			}
-
-			return Ok(new { Message = "El nombre y la contraseña han sido actualizados correctamente." });
-		}
-
-
-		[HttpDelete("EliminarUsuario")]
-		public async Task<IActionResult> EliminarUsuario(string userId)
-		{
-			var user = await _userManager.FindByIdAsync(userId);
-
-			if (user == null)
-			{
-				return NotFound(new { Message = "Usuario no encontrado." });
-			}
-
-			var personaUser = await _context.PersonasUser.FirstOrDefaultAsync(pu => pu.AspNetUserId == user.Id);
-
-			if (personaUser != null)
-			{
-				var persona = await _context.Personas.FindAsync(personaUser.PersonaId);
-
-				if (persona != null)
-				{
-					_context.Personas.Remove(persona);
-				}
-
-				_context.PersonasUser.Remove(personaUser);
-				await _context.SaveChangesAsync();
-			}
-
-			var result = await _userManager.DeleteAsync(user);
-
-			if (result.Succeeded)
-			{
-				return Ok(new { Message = "Usuario y sus datos asociados han sido eliminados correctamente." });
-			}
-
-			return BadRequest(new { Errors = result.Errors });
-		}
-
-		[HttpGet("GetRoles")]
-		// Move custom role validation to a service
-		public async Task<IActionResult> GetRoles(string userId)
-		{
-			var usuario = await _userManager.FindByIdAsync(userId);
-
-			if (usuario == null)
-			{
-				return NotFound(new { Errors = "No se encontró ningún usuario con ese id." });
-			}
-
-			var userRoles = await _userManager.GetRolesAsync(usuario);
-   
-			if (!userRoles.Contains("Admin"))
-			{
-				return StatusCode(403, new { Errors = "No está autorizado para acceder a este recurso." });
-			}
-			
-			var roles = _roleManager.Roles.ToList();
     
-			return Ok(roles);
-		}
+        [HttpGet("/admin-page")]
+        [Authorize(Policy = "admin_policy")]
+        public async Task<IActionResult> AdminPage()
+        {
+	        return Ok("Admin page - only for admin users 🔐");
+        }
+    
+        private static bool AuthenticateNormalUser(LoginRequest user)
+        {
+	        //Check the given user credential is valid - Usually this should be checked from database
+	        return user.Email == "hello@example.com" && user.Password == "pass123";
+        }
+        private static bool AuthenticateAdminUser(LoginRequest user)
+        {
+	        //Check the given user credential is valid - Usually this should be checked from database
+	        return user.Email == "admin@example.com" && user.Password == "admin123";
+        }
+        
+        // [HttpPost("Login")]
+        // public async Task<IActionResult> Login(LoginRequest request)
+        // {
+		// }
+
+
+		// [HttpPost("CrearUsuario")]
+        // public async Task<IActionResult> CrearUsuario(CrearUsuarioRequest request)
+        // {
+
+		// }
+
+        // [HttpPost("AsignarRol")]
+        // public async Task<IActionResult> AsignarRol(AsignarRolRequest request)
+        // {
+        //     List<string> errors = new();
+            
+        // }
+
+        // [HttpGet("GetUser")]
+        // public async Task<IActionResult> Get(string userId)
+        // {
+
+		// }
+
+		// [HttpGet("GetAll")]
+		// public async Task<IActionResult> GetAll()
+		// {
+			
+		// }
+
+		// [HttpPut("ActualizarUsuario")]
+		// public async Task<IActionResult> ActualizarUsuario(string userId, ActualizarUsuarioRequest request)
+		// {
+			
+		// }
+
+
+		// [HttpDelete("EliminarUsuario")]
+		// public async Task<IActionResult> EliminarUsuario(string userId)
+		// {
+			
+		// }
+
+		// [HttpGet("GetRoles")]
+		// // Move custom role validation to a service
+		// public async Task<IActionResult> GetRoles(string userId)
+		// {
+
+		// }
 
 	}
 }

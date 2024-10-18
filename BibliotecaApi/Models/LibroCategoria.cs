@@ -4,10 +4,11 @@ namespace BibliotecaApi.Models
 {
     public class LibroCategoria
     {
-        public long Id { get; set; }
-        public long LibroId { get; set; }
-        public long? CategoriaId { get; set; }
+        public int Id { get; set; }
+        public int LibroId { get; set; }
+        public int? CategoriaId { get; set; }
 
+        public Libro? Libro { get; set; }
         public Categoria? Categoria { get; set; }
     }
 }
