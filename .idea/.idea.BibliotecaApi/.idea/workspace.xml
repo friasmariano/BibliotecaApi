@@ -8,29 +8,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ed584ddc-3bae-4e5b-9456-63b464b6a3e9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Models/Rol.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Models/UserToken.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Models/Usuario.cs" afterDir="false" />
+    <list default="true" id="ed584ddc-3bae-4e5b-9456-63b464b6a3e9" name="Changes" comment="Corrección en generación y validación de token">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/BibliotecaContext.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/BibliotecaContext.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Migrations/20241016140141_UseDefaultIdentityUser.Designer.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Migrations/20241016140141_UseDefaultIdentityUser.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Migrations/20241016161144_AddPersonaUser.Designer.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Migrations/20241016161144_AddPersonaUser.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Migrations/20241016161444_AddPersonaFK_PersonUser.Designer.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Migrations/20241016161444_AddPersonaFK_PersonUser.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Migrations/BibliotecaContextModelSnapshot.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Models/Autor.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Models/Autor.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Models/AutorLibro.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Models/AutorLibro.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Models/Categoria.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Models/Categoria.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Models/Libro.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Models/Libro.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Models/LibroCategoria.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Models/LibroCategoria.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Models/Persona.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Models/Persona.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Models/PersonaUser.cs" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/BibliotecaApi/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Validators/PasswordHashValidator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Validators/PasswordHashValidator.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -128,7 +109,7 @@
       <workItem from="1729139203209" duration="120000" />
       <workItem from="1729139509691" duration="29000" />
       <workItem from="1729139791504" duration="1120000" />
-      <workItem from="1729277948759" duration="2761000" />
+      <workItem from="1729277948759" duration="6631000" />
     </task>
     <task id="LOCAL-00001" summary="Updates en UserManager y Roles">
       <option name="closed" value="true" />
@@ -154,7 +135,15 @@
       <option name="project" value="LOCAL" />
       <updated>1729141364221</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Corrección en generación y validación de token">
+      <option name="closed" value="true" />
+      <created>1729282819333</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1729282819334</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -179,6 +168,7 @@
     <MESSAGE value="Updates en UserManager y Roles" />
     <MESSAGE value="Update (sync)" />
     <MESSAGE value="Cambio en forma de validar rol 'Admin', controllers" />
-    <option name="LAST_COMMIT_MESSAGE" value="Cambio en forma de validar rol 'Admin', controllers" />
+    <MESSAGE value="Corrección en generación y validación de token" />
+    <option name="LAST_COMMIT_MESSAGE" value="Corrección en generación y validación de token" />
   </component>
 </project>

@@ -9,7 +9,7 @@ namespace BibliotecaApi.Validators
             return Argon2.Verify(storedHash, currentHash);
         }
 
-        public string GenerateHash(string password)
+        public static string GenerateHash(string password)
         {
             return Argon2.Hash(password);
         }
