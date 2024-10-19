@@ -10,7 +10,10 @@ using BibliotecaApi.Controllers;
 using BibliotecaApi.Requests;
 using System.Text;
 using System.Security.Claims;
+using BibliotecaApi.Interfaces;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
 
@@ -21,96 +24,158 @@ namespace BibliotecaApi.Controllers
     public class AccountController : ControllerBase
     {
         private readonly BibliotecaContext _context;
+        private readonly PasswordHashValidator _passwordHashValidator;
         private readonly PasswordValidator _passwordValidator;
         private readonly EmailValidator _emailValidator;
-        private IConfiguration _configuration { get; }
+        private readonly IUserValidationService _userValidationService;
+        private IConfiguration Configuration { get; }
 
-        public AccountController(BibliotecaContext context, PasswordValidator passwordValidator,
-                                 EmailValidator emailValidator, IConfiguration configuration)
+        public AccountController(BibliotecaContext context, PasswordHashValidator passwordHashValidator,
+                                 EmailValidator emailValidator, IConfiguration configuration,
+                                 IUserValidationService userValidationService,
+                                 PasswordValidator passwordValidator)
         {
             _context = context;
             _emailValidator = emailValidator;
+            _passwordHashValidator = passwordHashValidator;
+            Configuration = configuration;
+            _userValidationService = userValidationService;
             _passwordValidator = passwordValidator;
-            _configuration = configuration;
         }
 
-        [HttpPost("NewLogin")]
-        public async Task<IActionResult> Login(LoginRequest user)
+        [HttpPost("Login")]
+        public async Task<IActionResult> Login(LoginRequest request)
         {
-	        var normalUser = AuthenticateNormalUser(user);
-	        var adminUser = AuthenticateAdminUser(user);
-        
-	        if (!(normalUser || adminUser))
-		        return Unauthorized();
-        
-	        var issuer = _configuration["Jwt:Issuer"];
-	        var audience = _configuration["Jwt:Audience"];
-	        var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"] ?? string.Empty);
-	        var claims = new List<Claim>()
+	        #region Declaration(s)
+	        var user = await _context.Usuarios
+									.Where(e => e.Email == request.Email)
+									.FirstOrDefaultAsync();
+	        
+	        List<string> errors = new();
+	        ValidationResult emailResult = _emailValidator.Validate(request.Email);
+	        bool passwordValidator = _passwordHashValidator.ValidatePassword(user!.Password, request.Password);
+	        #endregion
+
+	        #region Validation(s)
+	        if (!emailResult.IsValid)
 	        {
-		        new Claim("Id", Guid.NewGuid().ToString()),
-		        new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-		        new Claim(JwtRegisteredClaimNames.Email, user.Email),
-		        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-	        };
-        
-	        if (adminUser)
-	        {
-		        claims.Add(new Claim(ClaimTypes.Role, "admin"));
+		        foreach (var error in emailResult.Errors)
+		        {
+			        errors.Add(error.ErrorMessage);
+		        }
 	        }
-	        var tokenDescriptor = new SecurityTokenDescriptor
+	        
+	        if (!passwordValidator)
 	        {
-		        Subject = new ClaimsIdentity(claims),
-		        Expires = DateTime.UtcNow.AddMinutes(5), //should be at least 5 minutes - https://github.com/IdentityServer/IdentityServer3/issues/1251
-		        Issuer = issuer,
-		        Audience = audience,
-		        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
-	        };
+		        errors.Add("Credenciales inválidas.");
+	        }
+
+	        #endregion
+
+	        if (errors.Count == 0)
+	        {
+		        bool isAdmin = await _userValidationService.IsUserAdminAsync(user!.Id);
+	
+		        var issuer = Configuration["Jwt:Issuer"];
+		        var audience = Configuration["Jwt:Audience"];
+		        var key = Encoding.ASCII.GetBytes(Configuration["Jwt:Key"] ?? string.Empty);
+		        
+		        var claims = new List<Claim>()
+		        {
+			        new Claim("Id", user.Id.ToString()),
+			        new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+			        new Claim(JwtRegisteredClaimNames.Email, user.Email),
+			        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+		        };
         
-	        var tokenHandler = new JwtSecurityTokenHandler();
-	        var token = tokenHandler.CreateToken(tokenDescriptor);
-	        var stringToken = tokenHandler.WriteToken(token);
-
-	        return Ok(stringToken);
-        }
-
+		        if (isAdmin)
+			        claims.Add(new Claim(ClaimTypes.Role, "admin"));
+		        
+		        var tokenDescriptor = new SecurityTokenDescriptor
+		        {
+			        Subject = new ClaimsIdentity(claims),
+			        Expires = DateTime.UtcNow.AddHours(5),
+			        Issuer = issuer,
+			        Audience = audience,
+			        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
+		        };
         
-        [HttpGet("/secure-page")]
-        [Authorize]
-        public async Task<IActionResult> SecurePage()
-        {
-	        return Ok("secure page - for all authenticated users 🔐");
-        }
-    
-        [HttpGet("/admin-page")]
-        [Authorize(Policy = "admin_policy")]
-        public async Task<IActionResult> AdminPage()
-        {
-	        return Ok("Admin page - only for admin users 🔐");
-        }
-    
-        private static bool AuthenticateNormalUser(LoginRequest user)
-        {
-	        //Check the given user credential is valid - Usually this should be checked from database
-	        return user.Email == "hello@example.com" && user.Password == "pass123";
-        }
-        private static bool AuthenticateAdminUser(LoginRequest user)
-        {
-	        //Check the given user credential is valid - Usually this should be checked from database
-	        return user.Email == "admin@example.com" && user.Password == "admin123";
+		        var tokenHandler = new JwtSecurityTokenHandler();
+		        var token = tokenHandler.CreateToken(tokenDescriptor);
+		        var stringToken = tokenHandler.WriteToken(token);
+
+		        return Ok(stringToken);
+	        }
+        
+
+	        return BadRequest(new { errors = errors });
         }
         
-        // [HttpPost("Login")]
-        // public async Task<IActionResult> Login(LoginRequest request)
-        // {
-		// }
+        [Authorize(Roles = "admin")]
+		[HttpPost("CrearUsuario")]
+        public async Task<IActionResult> CrearUsuario(CrearUsuarioRequest request)
+        {
+	        #region Declaration(s)
+			List<string> errors = new();
+			ValidationResult emailResult = _emailValidator.Validate(request.Email);
+			ValidationResult passwordResult = _passwordValidator.Validate(request.Password);
 
+			var rol = await _context.Roles.Where(e => e.Id == request.RolId)
+							.FirstOrDefaultAsync();
+			#endregion
+			
+			#region Validation(s)
+			if (string.IsNullOrWhiteSpace(request.Nombre))
+			{
+				errors.Add("El nombre de usuario no es válido.");
+			}
 
-		// [HttpPost("CrearUsuario")]
-        // public async Task<IActionResult> CrearUsuario(CrearUsuarioRequest request)
-        // {
+			if (!emailResult.IsValid)
+			{
+				foreach (var error in emailResult.Errors)
+				{
+					errors.Add(error.ErrorMessage);
+				}
+			}
+			
+			if (!passwordResult.IsValid)
+			{
+				foreach (var error in emailResult.Errors)
+				{
+					errors.Add(error.ErrorMessage);
+				}
+			}
 
-		// }
+			if (rol == null)
+			{
+				errors.Add("El rol especificado no existe.");
+			}
+			#endregion
+
+			if (errors.Count == 0)
+			{
+				var person = new Persona()
+				{
+					Nombre = request.Nombre,
+				};
+				_context.Personas.Add(person);
+				await _context.SaveChangesAsync();
+
+				var user = new Usuario()
+				{
+					Email = request.Email,
+					Password = _passwordHashValidator.GenerateHash(request.Password),
+					PersonaId = person.Id,
+					RoldId = rol!.Id
+				};
+				_context.Usuarios.Add(user);
+				await _context.SaveChangesAsync();
+
+				return Ok(new { user.Id, user.Email, user.Persona.Nombre });
+			}
+			
+			return BadRequest(new { errors });
+        }
 
         // [HttpPost("AsignarRol")]
         // public async Task<IActionResult> AsignarRol(AsignarRolRequest request)

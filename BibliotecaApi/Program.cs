@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Identity;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BibliotecaApi.Interfaces;
+using BibliotecaApi.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -31,6 +33,8 @@ builder.Services.AddDbContext<BibliotecaContext>(options =>
 builder.Services.AddScoped<EmailValidator>();
 builder.Services.AddScoped<PasswordValidator>();
 builder.Services.AddScoped<PasswordHashValidator>();
+builder.Services.AddScoped<IUserValidationService, UserValidationService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // Adding authentication
 builder.Services.AddAuthentication(options =>
@@ -142,12 +146,18 @@ using (var scope = app.Services.CreateScope())
 async Task<IActionResult> CreateUserIfNotExists(string email, string password, string role, 
                           string personaName, BibliotecaContext context) {
     
-    var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Email == email);
+    var usuario = await context.Usuarios
+                        .Where(r => r.Email == email)
+                        .FirstOrDefaultAsync();
 
     if (usuario != null)
     {
         return new BadRequestObjectResult(new { message = "El usuario ya existe." });  
     }
+
+    var person = await context.Personas
+                               .Where(r => r.Nombre == personaName)
+                               .FirstOrDefaultAsync();
     
     var persona = new Persona() { Nombre = personaName };
     await context.Personas.AddAsync(persona);

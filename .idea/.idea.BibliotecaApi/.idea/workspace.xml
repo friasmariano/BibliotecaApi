@@ -8,10 +8,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ed584ddc-3bae-4e5b-9456-63b464b6a3e9" name="Changes" comment="Corrección en generación y validación de token">
+    <list default="true" id="ed584ddc-3bae-4e5b-9456-63b464b6a3e9" name="Changes" comment="Agregando usuarios por defecto - Program.cs">
+      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Interfaces/IUserRepository.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Interfaces/IUserValidationService.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Repositories/UserRepository.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/BibliotecaApi/Services/UserValidationService.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.BibliotecaApi/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Controllers/AccountController.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BibliotecaApi/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/Requests/CrearUsuarioRequest.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Requests/CrearUsuarioRequest.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/BibliotecaApi/Validators/PasswordHashValidator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/Validators/PasswordHashValidator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" beforeDir="false" afterPath="$PROJECT_DIR$/BibliotecaApi/appsettings.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -109,7 +116,7 @@
       <workItem from="1729139203209" duration="120000" />
       <workItem from="1729139509691" duration="29000" />
       <workItem from="1729139791504" duration="1120000" />
-      <workItem from="1729277948759" duration="6631000" />
+      <workItem from="1729277948759" duration="12729000" />
     </task>
     <task id="LOCAL-00001" summary="Updates en UserManager y Roles">
       <option name="closed" value="true" />
@@ -143,7 +150,15 @@
       <option name="project" value="LOCAL" />
       <updated>1729282819334</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Agregando usuarios por defecto - Program.cs">
+      <option name="closed" value="true" />
+      <created>1729291577906</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1729291577906</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -169,6 +184,7 @@
     <MESSAGE value="Update (sync)" />
     <MESSAGE value="Cambio en forma de validar rol 'Admin', controllers" />
     <MESSAGE value="Corrección en generación y validación de token" />
-    <option name="LAST_COMMIT_MESSAGE" value="Corrección en generación y validación de token" />
+    <MESSAGE value="Agregando usuarios por defecto - Program.cs" />
+    <option name="LAST_COMMIT_MESSAGE" value="Agregando usuarios por defecto - Program.cs" />
   </component>
 </project>
